@@ -9,7 +9,7 @@ import type {
 const now = Date.now();
 const hour = 60 * 60 * 1000;
 
-export const products: Product[] = [
+export const products = [
   {
     id: 'p1',
     name: 'Mickey Mouse T-Shirt',
@@ -93,9 +93,9 @@ export const products: Product[] = [
     createdAt: now - 96 * hour,
     updatedAt: now - hour,
   },
-];
+] satisfies Product[];
 
-export const sales: SaleTransaction[] = [
+export const sales = [
   {
     id: 's1',
     productId: 'p1',
@@ -134,9 +134,9 @@ export const sales: SaleTransaction[] = [
     currency: 'ETB',
     soldAt: now - 5 * hour,
   },
-];
+] satisfies SaleTransaction[];
 
-export const expenses: Expense[] = [
+export const expenses = [
   {
     id: 'e1',
     title: 'Transport',
@@ -164,9 +164,9 @@ export const expenses: Expense[] = [
     recordedAt: now - 26 * hour,
     currency: 'ETB',
   },
-];
+] satisfies Expense[];
 
-export const stockLogs: StockLog[] = [
+export const stockLogs = [
   {
     id: 'st1',
     productId: 'p1',
@@ -179,9 +179,9 @@ export const stockLogs: StockLog[] = [
     loggedAt: now - 30 * hour,
     notes: 'Weekend restock',
   },
-];
+] satisfies StockLog[];
 
-export const activityFeed: ActivityEntry[] = [
+export const activityFeed = [
   {
     id: 'a1',
     type: 'sale',
@@ -210,7 +210,7 @@ export const activityFeed: ActivityEntry[] = [
     amount: 180,
     timestamp: 'Today, 13:05',
   },
-];
+] satisfies ActivityEntry[];
 
 export const todaysSalesTotal = sales.reduce(
   (total, sale) => total + sale.totalRevenue,
