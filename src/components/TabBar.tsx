@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { copy } from '../content/copy';
 import { colors, radius, spacing } from '../theme';
 
 export type TabKey = 'dashboard' | 'products' | 'sell' | 'expenses';
@@ -17,10 +18,10 @@ type TabBarProps = {
 };
 
 const tabs: TabConfig[] = [
-  { key: 'dashboard', label: 'Home', icon: '◌' },
-  { key: 'products', label: 'Products', icon: '□' },
-  { key: 'sell', label: 'Sell', icon: '＋' },
-  { key: 'expenses', label: 'Expenses', icon: '△' },
+  { key: 'dashboard', label: copy.tabs.home, icon: '◌' },
+  { key: 'products', label: copy.tabs.products, icon: '□' },
+  { key: 'sell', label: copy.tabs.sell, icon: '＋' },
+  { key: 'expenses', label: copy.tabs.expenses, icon: '△' },
 ];
 
 export function TabBar({ activeTab, onTabPress }: TabBarProps) {

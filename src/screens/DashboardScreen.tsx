@@ -5,6 +5,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
 import { StatCard } from '../components/StatCard';
+import { copy } from '../content/copy';
 import {
   lowStockProducts,
   todaysExpensesTotal,
@@ -12,6 +13,7 @@ import {
   todaysSalesTotal,
 } from '../data/mockData';
 import { colors, spacing } from '../theme';
+import { formatCurrency } from '../utils/currency';
 
 type DashboardScreenProps = {
   onOpenReports: () => void;
@@ -20,45 +22,52 @@ type DashboardScreenProps = {
 export function DashboardScreen({ onOpenReports }: DashboardScreenProps) {
   return (
     <Screen
-      title="Today at a Glance"
-      subtitle="A fast view of sales, spending, profit, and what needs restocking.">
+      title={copy.dashboard.title}
+      subtitle={copy.dashboard.subtitle}>
       <View style={styles.statGrid}>
         <StatCard
           accentColor="#F4D8C8"
-          icon="💰"
-          label="Today's Sales"
-          value={`$${todaysSalesTotal}`}
+          icon="📈"
+          label={copy.dashboard.salesLabel}
+          value={formatCurrency(todaysSalesTotal)}
         />
         <StatCard
           accentColor="#F5E2C3"
           icon="📉"
-          label="Today's Expenses"
-          value={`$${todaysExpensesTotal}`}
+          label={copy.dashboard.expensesLabel}
+          value={formatCurrency(todaysExpensesTotal)}
         />
         <StatCard
           accentColor="#D6EAD9"
           icon="↗"
-          label="Profit"
-          value={`$${todaysProfitTotal}`}
+          label={copy.dashboard.profitLabel}
+          value={formatCurrency(todaysProfitTotal)}
         />
         <SectionCard>
-          <Text style={styles.promptLabel}>Need details?</Text>
+          <Text style={styles.promptLabel}>{copy.dashboard.detailsTitle}</Text>
           <Text style={styles.promptText}>
-            Open the activity history to audit each sale and expense entry.
+            {copy.dashboard.detailsText}
           </Text>
-          <PrimaryButton label="Open Reports" onPress={onOpenReports} />
+          <PrimaryButton label={copy.dashboard.openReports} onPress={onOpenReports} />
         </SectionCard>
       </View>
 
-      <SectionCard title="Low Stock Alerts" actionLabel="Reorder Soon">
+      <SectionCard
+        title={copy.dashboard.lowStockTitle}
+        actionLabel={copy.dashboard.lowStockAction}>
         {lowStockProducts.map(product => (
           <View key={product.id} style={styles.stockRow}>
             <View>
               <Text style={styles.productName}>{product.name}</Text>
-              <Text style={styles.productMeta}>{product.category}</Text>
+              <Text style={styles.productMeta}>
+                {product.category}
+                {product.attributes.size ? ` · ${product.attributes.size}` : ''}
+              </Text>
             </View>
             <View style={styles.stockBadge}>
-              <Text style={styles.stockBadgeText}>{product.quantity} left</Text>
+              <Text style={styles.stockBadgeText}>
+                {copy.dashboard.stockLeft(product.currentStock)}
+              </Text>
             </View>
           </View>
         ))}

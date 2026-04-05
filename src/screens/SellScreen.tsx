@@ -4,33 +4,39 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
+import { copy } from '../content/copy';
 import { products } from '../data/mockData';
 import { colors, radius, spacing } from '../theme';
+import { formatCurrency } from '../utils/currency';
 
 export function SellScreen() {
+  const selectedProduct = products[0];
+  const expectedTotal = selectedProduct ? selectedProduct.sellingPrice : 0;
+
   return (
     <Screen
-      title="New Sale"
-      subtitle="Keep this flow fast for the counter. Search, enter quantity, confirm."
-      footer={<PrimaryButton label="Confirm Sale" />}>
-      <SectionCard title="Select Product">
+      title={copy.sell.title}
+      subtitle={copy.sell.subtitle}
+      footer={<PrimaryButton label={copy.sell.confirmButton} />}>
+      <SectionCard title={copy.sell.selectProduct}>
         <TextInput
           editable={false}
-          placeholder="Search product"
+          placeholder={copy.sell.searchPlaceholder}
           placeholderTextColor={colors.textMuted}
           style={styles.input}
-          value={products[0]?.name ?? ''}
+          value={selectedProduct?.name ?? ''}
         />
         <View style={styles.selectionCard}>
-          <Text style={styles.selectionTitle}>{products[0]?.name}</Text>
+          <Text style={styles.selectionTitle}>{selectedProduct?.name}</Text>
           <Text style={styles.selectionMeta}>
-            Selling at ${products[0]?.sellingPrice} · {products[0]?.quantity} in stock
+            {copy.sell.sellingAt} {formatCurrency(selectedProduct?.sellingPrice ?? 0)} ·{' '}
+            {selectedProduct?.currentStock} {copy.sell.inStock}
           </Text>
         </View>
       </SectionCard>
 
-      <SectionCard title="Sale Details">
-        <Text style={styles.fieldLabel}>Quantity Sold</Text>
+      <SectionCard title={copy.sell.saleDetails}>
+        <Text style={styles.fieldLabel}>{copy.sell.quantitySold}</Text>
         <TextInput
           editable={false}
           keyboardType="number-pad"
@@ -38,8 +44,8 @@ export function SellScreen() {
           value="1"
         />
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Expected total</Text>
-          <Text style={styles.summaryValue}>$88</Text>
+          <Text style={styles.summaryLabel}>{copy.sell.expectedTotal}</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(expectedTotal)}</Text>
         </View>
       </SectionCard>
     </Screen>

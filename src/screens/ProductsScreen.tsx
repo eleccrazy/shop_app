@@ -4,36 +4,43 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
+import { copy } from '../content/copy';
 import { products } from '../data/mockData';
 import { colors, spacing } from '../theme';
+import { formatCurrency } from '../utils/currency';
 
 export function ProductsScreen() {
   return (
     <Screen
-      title="Products"
-      subtitle="Your inventory master list with pricing and stock levels."
-      footer={<PrimaryButton label="+ Add Product" />}>
+      title={copy.products.title}
+      subtitle={copy.products.subtitle}
+      footer={<PrimaryButton label={copy.products.addButton} />}>
       {products.map(product => (
         <SectionCard key={product.id}>
           <View style={styles.row}>
             <View style={styles.productInfo}>
               <Text style={styles.name}>{product.name}</Text>
               <Text style={styles.meta}>
-                {product.category} · Buy ${product.buyingPrice} · Sell $
-                {product.sellingPrice}
+                {product.category} · {copy.products.buyLabel}{' '}
+                {formatCurrency(product.costPrice)} · {copy.products.sellLabel}{' '}
+                {formatCurrency(product.sellingPrice)}
               </Text>
             </View>
             <View
               style={[
                 styles.stockPill,
-                product.quantity <= 5 ? styles.lowPill : styles.normalPill,
+                product.currentStock <= product.lowStockThreshold
+                  ? styles.lowPill
+                  : styles.normalPill,
               ]}>
               <Text
                 style={[
                   styles.stockPillText,
-                  product.quantity <= 5 ? styles.lowPillText : styles.normalPillText,
+                  product.currentStock <= product.lowStockThreshold
+                    ? styles.lowPillText
+                    : styles.normalPillText,
                 ]}>
-                {product.quantity} pcs
+                {product.currentStock} {copy.products.quantityUnit}
               </Text>
             </View>
           </View>

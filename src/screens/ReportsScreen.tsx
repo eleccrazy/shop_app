@@ -4,8 +4,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
+import { copy } from '../content/copy';
 import { activityFeed } from '../data/mockData';
 import { colors, spacing } from '../theme';
+import { formatCurrency } from '../utils/currency';
 
 type ReportsScreenProps = {
   onBack: () => void;
@@ -14,10 +16,16 @@ type ReportsScreenProps = {
 export function ReportsScreen({ onBack }: ReportsScreenProps) {
   return (
     <Screen
-      title="Reports"
-      subtitle="A simple audit trail of sales and expenses."
-      footer={<PrimaryButton label="Back to Dashboard" onPress={onBack} variant="ghost" />}>
-      <SectionCard title="History">
+      title={copy.reports.title}
+      subtitle={copy.reports.subtitle}
+      footer={
+        <PrimaryButton
+          label={copy.reports.backButton}
+          onPress={onBack}
+          variant="ghost"
+        />
+      }>
+      <SectionCard title={copy.reports.historyTitle}>
         {activityFeed.map(entry => (
           <View key={entry.id} style={styles.row}>
             <View style={styles.textBlock}>
@@ -29,7 +37,8 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
                 styles.amount,
                 entry.type === 'sale' ? styles.saleAmount : styles.expenseAmount,
               ]}>
-              {entry.type === 'sale' ? '+' : '-'}${entry.amount}
+              {entry.type === 'sale' ? '+' : '-'}
+              {formatCurrency(entry.amount)}
             </Text>
           </View>
         ))}
