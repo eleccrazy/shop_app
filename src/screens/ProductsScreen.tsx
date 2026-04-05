@@ -22,10 +22,11 @@ const categoryOptions: Array<ProductCategory | 'All'> = [
 ];
 
 export function ProductsScreen() {
-  const { addProduct, products } = useAppStore();
+  const { addProduct, products, updateProduct } = useAppStore();
   const [category, setCategory] = useState<ProductCategory>('Kids (6-12Y)');
   const [costPrice, setCostPrice] = useState('');
   const [currentStock, setCurrentStock] = useState('');
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     message: string;
     status: 'error' | 'success';
@@ -43,7 +44,19 @@ export function ProductsScreen() {
     return products.filter(product => product.category === selectedFilter);
   }, [products, selectedFilter]);
 
-  const handleAddProduct = () => {
+  const isEditing = editingProductId !== null;
+
+  const resetForm = () => {
+    setCategory('Kids (6-12Y)');
+    setName('');
+    setCostPrice('');
+    setSellingPrice('');
+    setCurrentStock('');
+    setEditingProductId(null);
+    setIsCreating(false);
+  };
+
+  const handleSaveProduct = () => {
     if (!name.trim() || !costPrice || !sellingPrice || !currentStock) {
       setFeedback({
         message: 'Fill in all product fields before saving.',
@@ -52,22 +65,30 @@ export function ProductsScreen() {
       return;
     }
 
-    addProduct({
-      category,
-      costPrice: Number(costPrice),
-      currentStock: Number(currentStock),
-      name,
-      sellingPrice: Number(sellingPrice),
-    });
+    if (isEditing && editingProductId) {
+      updateProduct({
+        category,
+        costPrice: Number(costPrice),
+        currentStock: Number(currentStock),
+        id: editingProductId,
+        name,
+        sellingPrice: Number(sellingPrice),
+      });
+    } else {
+      addProduct({
+        category,
+        costPrice: Number(costPrice),
+        currentStock: Number(currentStock),
+        name,
+        sellingPrice: Number(sellingPrice),
+      });
+    }
 
-    setCategory('Kids (6-12Y)');
-    setName('');
-    setCostPrice('');
-    setSellingPrice('');
-    setCurrentStock('');
-    setIsCreating(false);
+    resetForm();
     setFeedback({
-      message: 'Product saved successfully.',
+      message: isEditing
+        ? copy.products.updateSuccessMessage
+        : 'Product saved successfully.',
       status: 'success',
     });
   };
@@ -77,24 +98,50 @@ export function ProductsScreen() {
   };
 
   const closeCreateForm = () => {
-    setIsCreating(false);
+    resetForm();
+  };
+
+  const openEditForm = (productId: string) => {
+    const product = products.find(item => item.id === productId);
+
+    if (!product) {
+      return;
+    }
+
+    setEditingProductId(product.id);
+    setCategory(product.category ?? 'Kids (6-12Y)');
+    setName(product.name ?? '');
+    setCostPrice(String(product.costPrice ?? ''));
+    setSellingPrice(String(product.sellingPrice ?? ''));
+    setCurrentStock(String(product.currentStock ?? ''));
+    setIsCreating(true);
   };
 
   return (
     <Screen
       title={copy.products.title}
-      subtitle={isCreating ? copy.products.formSubtitle : copy.products.subtitle}
+      subtitle={
+        isCreating
+          ? isEditing
+            ? copy.products.editSubtitle
+            : copy.products.formSubtitle
+          : copy.products.subtitle
+      }
       headerAction={{
         label: isCreating ? copy.products.cancelAction : copy.products.addAction,
         onPress: isCreating ? closeCreateForm : openCreateForm,
       }}
       footer={
         isCreating ? (
-          <PrimaryButton label={copy.products.addButton} onPress={handleAddProduct} />
+          <PrimaryButton
+            label={isEditing ? copy.products.editButton : copy.products.addButton}
+            onPress={handleSaveProduct}
+          />
         ) : undefined
       }>
       {isCreating ? (
-        <SectionCard title={copy.products.formTitle}>
+        <SectionCard
+          title={isEditing ? copy.products.editFormTitle : copy.products.formTitle}>
           <TextInput
             onChangeText={setName}
             placeholder={copy.products.namePlaceholder}
@@ -186,35 +233,38 @@ export function ProductsScreen() {
 
       {!isCreating &&
         filteredProducts.map(product => (
-        <SectionCard key={product.id}>
-          <View style={styles.row}>
-            <View style={styles.productInfo}>
-              <Text style={styles.name}>{product.name}</Text>
-              <Text style={styles.meta}>
-                {product.category} · {copy.products.buyLabel}{' '}
-                {formatCurrency(product.costPrice ?? 0)} · {copy.products.sellLabel}{' '}
-                {formatCurrency(product.sellingPrice ?? 0)}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.stockPill,
-                (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0)
-                  ? styles.lowPill
-                  : styles.normalPill,
-              ]}>
-              <Text
+        <Pressable key={product.id} onPress={() => openEditForm(product.id)}>
+          <SectionCard>
+            <View style={styles.row}>
+              <View style={styles.productInfo}>
+                <Text style={styles.name}>{product.name}</Text>
+                <Text style={styles.meta}>
+                  {product.category} · {copy.products.buyLabel}{' '}
+                  {formatCurrency(product.costPrice ?? 0)} · {copy.products.sellLabel}{' '}
+                  {formatCurrency(product.sellingPrice ?? 0)}
+                </Text>
+              </View>
+              <View
                 style={[
-                  styles.stockPillText,
+                  styles.stockPill,
                   (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0)
-                    ? styles.lowPillText
-                    : styles.normalPillText,
+                    ? styles.lowPill
+                    : styles.normalPill,
                 ]}>
-                {product.currentStock ?? 0} {copy.products.quantityUnit}
-              </Text>
+                <Text
+                  style={[
+                    styles.stockPillText,
+                    (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0)
+                      ? styles.lowPillText
+                      : styles.normalPillText,
+                  ]}>
+                  {product.currentStock ?? 0} {copy.products.quantityUnit}
+                </Text>
+              </View>
             </View>
-          </View>
-        </SectionCard>
+            <Text style={styles.tapHint}>Tap to update this product</Text>
+          </SectionCard>
+        </Pressable>
       ))}
       <FeedbackPopup
         message={feedback?.message ?? ''}
@@ -282,6 +332,11 @@ const styles = StyleSheet.create({
   productInfo: {
     flex: 1,
     paddingRight: spacing.md,
+  },
+  tapHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: spacing.sm,
   },
   name: {
     color: colors.text,

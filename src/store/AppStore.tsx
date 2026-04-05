@@ -31,6 +31,10 @@ type AddProductInput = {
   sellingPrice: number;
 };
 
+type UpdateProductInput = AddProductInput & {
+  id: string;
+};
+
 type RecordSaleInput = {
   actualSoldPrice: number;
   productId: string;
@@ -51,10 +55,12 @@ type AppStoreValue = AppState & {
   todaysExpensesTotal: number;
   todaysProfitTotal: number;
   todaysSalesTotal: number;
+  updateProduct: (input: UpdateProductInput) => void;
 };
 
 type Action =
   | { type: 'ADD_PRODUCT'; payload: AddProductInput }
+  | { type: 'UPDATE_PRODUCT'; payload: UpdateProductInput }
   | { type: 'ADD_EXPENSE'; payload: AddExpenseInput }
   | { type: 'RECORD_SALE'; payload: RecordSaleInput };
 
@@ -119,6 +125,28 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         products: [newProduct, ...state.products],
+      };
+    }
+    case 'UPDATE_PRODUCT': {
+      const timestamp = Date.now();
+
+      return {
+        ...state,
+        products: state.products.map(product => {
+          if (product.id !== action.payload.id) {
+            return product;
+          }
+
+          return {
+            ...product,
+            category: action.payload.category,
+            costPrice: action.payload.costPrice,
+            currentStock: action.payload.currentStock,
+            name: action.payload.name.trim(),
+            sellingPrice: action.payload.sellingPrice,
+            updatedAt: timestamp,
+          };
+        }),
       };
     }
     case 'ADD_EXPENSE': {
@@ -275,6 +303,9 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
         (total, sale) => total + (sale.totalRevenue ?? 0),
         0,
       ),
+      updateProduct: input => {
+        dispatch({ type: 'UPDATE_PRODUCT', payload: input });
+      },
     };
   }, [state]);
 
