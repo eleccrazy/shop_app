@@ -1,5 +1,6 @@
 import React, { PropsWithChildren } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,10 @@ type ScreenProps = PropsWithChildren<{
   scrollable?: boolean;
   footer?: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  headerAction?: {
+    label: string;
+    onPress?: () => void;
+  };
 }>;
 
 export function Screen({
@@ -26,13 +31,21 @@ export function Screen({
   scrollable = true,
   footer,
   contentContainerStyle,
+  headerAction,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
 
   const content = (
     <View style={[styles.content, contentContainerStyle]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
+        <View style={styles.headerTopRow}>
+          <Text style={styles.title}>{title}</Text>
+          {headerAction ? (
+            <Pressable onPress={headerAction.onPress} style={styles.headerAction}>
+              <Text style={styles.headerActionText}>{headerAction.label}</Text>
+            </Pressable>
+          ) : null}
+        </View>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {children}
@@ -85,6 +98,12 @@ const styles = StyleSheet.create({
   header: {
     gap: spacing.xs,
   },
+  headerTopRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   title: {
     color: colors.text,
     fontSize: 31,
@@ -95,6 +114,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 15,
     lineHeight: 22,
+  },
+  headerAction: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  headerActionText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '800',
   },
   footer: {
     backgroundColor: colors.surface,

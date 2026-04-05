@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { FeedbackPopup } from '../components/FeedbackPopup';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
 import { copy } from '../content/copy';
-import { expenses } from '../data/mockData';
+import { useAppStore } from '../store/AppStore';
 import { colors, radius, spacing } from '../theme';
 import { formatCurrency } from '../utils/currency';
 
@@ -20,26 +21,56 @@ function formatRelativeExpenseTime(timestamp: number) {
 }
 
 export function ExpensesScreen() {
+  const { addExpense, expenses } = useAppStore();
+  const [amount, setAmount] = useState('');
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    status: 'error' | 'success';
+  } | null>(null);
+  const [title, setTitle] = useState('');
+
+  const handleSaveExpense = () => {
+    if (!title.trim() || !amount) {
+      setFeedback({
+        message: 'Enter both the expense title and amount.',
+        status: 'error',
+      });
+      return;
+    }
+
+    addExpense({
+      amount: Number(amount),
+      title,
+    });
+
+    setTitle('');
+    setAmount('');
+    setFeedback({
+      message: copy.expenses.successMessage,
+      status: 'success',
+    });
+  };
+
   return (
     <Screen
       title={copy.expenses.title}
       subtitle={copy.expenses.subtitle}
-      footer={<PrimaryButton label={copy.expenses.saveButton} />}>
+      footer={<PrimaryButton label={copy.expenses.saveButton} onPress={handleSaveExpense} />}>
       <SectionCard title={copy.expenses.addTitle}>
         <TextInput
-          editable={false}
+          onChangeText={setTitle}
           placeholder={copy.expenses.whatDidYouBuy}
           placeholderTextColor={colors.textMuted}
           style={styles.input}
-          value="Transport"
+          value={title}
         />
         <TextInput
-          editable={false}
           keyboardType="decimal-pad"
+          onChangeText={setAmount}
           placeholder={copy.expenses.howMuch}
           placeholderTextColor={colors.textMuted}
           style={styles.input}
-          value={formatCurrency(12)}
+          value={amount}
         />
       </SectionCard>
 
@@ -48,12 +79,20 @@ export function ExpensesScreen() {
           <View key={expense.id} style={styles.row}>
             <View>
               <Text style={styles.title}>{expense.title}</Text>
-              <Text style={styles.meta}>{formatRelativeExpenseTime(expense.expenseDate)}</Text>
+              <Text style={styles.meta}>
+                {formatRelativeExpenseTime(expense.expenseDate ?? Date.now())}
+              </Text>
             </View>
-            <Text style={styles.amount}>-{formatCurrency(expense.amount)}</Text>
+            <Text style={styles.amount}>-{formatCurrency(expense.amount ?? 0)}</Text>
           </View>
         ))}
       </SectionCard>
+      <FeedbackPopup
+        message={feedback?.message ?? ''}
+        onClose={() => setFeedback(null)}
+        status={feedback?.status ?? 'success'}
+        visible={Boolean(feedback)}
+      />
     </Screen>
   );
 }

@@ -5,7 +5,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
 import { copy } from '../content/copy';
-import { activityFeed } from '../data/mockData';
+import { useAppStore } from '../store/AppStore';
 import { colors, spacing } from '../theme';
 import { formatCurrency } from '../utils/currency';
 
@@ -14,6 +14,8 @@ type ReportsScreenProps = {
 };
 
 export function ReportsScreen({ onBack }: ReportsScreenProps) {
+  const { activityFeed } = useAppStore();
+
   return (
     <Screen
       title={copy.reports.title}
@@ -26,22 +28,26 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
         />
       }>
       <SectionCard title={copy.reports.historyTitle}>
-        {activityFeed.map(entry => (
-          <View key={entry.id} style={styles.row}>
-            <View style={styles.textBlock}>
-              <Text style={styles.title}>{entry.title}</Text>
-              <Text style={styles.meta}>{entry.timestamp}</Text>
+        {activityFeed.length > 0 ? (
+          activityFeed.map(entry => (
+            <View key={entry.id} style={styles.row}>
+              <View style={styles.textBlock}>
+                <Text style={styles.title}>{entry.title}</Text>
+                <Text style={styles.meta}>{entry.timestamp}</Text>
+              </View>
+              <Text
+                style={[
+                  styles.amount,
+                  entry.type === 'sale' ? styles.saleAmount : styles.expenseAmount,
+                ]}>
+                {entry.type === 'sale' ? '+' : '-'}
+                {formatCurrency(entry.amount ?? 0)}
+              </Text>
             </View>
-            <Text
-              style={[
-                styles.amount,
-                entry.type === 'sale' ? styles.saleAmount : styles.expenseAmount,
-              ]}>
-              {entry.type === 'sale' ? '+' : '-'}
-              {formatCurrency(entry.amount)}
-            </Text>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={styles.meta}>{copy.reports.emptyState}</Text>
+        )}
       </SectionCard>
     </Screen>
   );

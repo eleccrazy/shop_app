@@ -3,16 +3,19 @@ import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { AppStoreProvider } from './src/store/AppStore';
 import { colors } from './src/theme';
 
 function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={colors.background}
-      />
-      <AppNavigator />
+      <AppStoreProvider>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={colors.background}
+        />
+        <AppNavigator />
+      </AppStoreProvider>
     </SafeAreaProvider>
   );
 }

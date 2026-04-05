@@ -6,12 +6,7 @@ import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
 import { StatCard } from '../components/StatCard';
 import { copy } from '../content/copy';
-import {
-  lowStockProducts,
-  todaysExpensesTotal,
-  todaysProfitTotal,
-  todaysSalesTotal,
-} from '../data/mockData';
+import { useAppStore } from '../store/AppStore';
 import { colors, spacing } from '../theme';
 import { formatCurrency } from '../utils/currency';
 
@@ -20,6 +15,13 @@ type DashboardScreenProps = {
 };
 
 export function DashboardScreen({ onOpenReports }: DashboardScreenProps) {
+  const {
+    lowStockProducts,
+    todaysExpensesTotal,
+    todaysProfitTotal,
+    todaysSalesTotal,
+  } = useAppStore();
+
   return (
     <Screen
       title={copy.dashboard.title}
@@ -55,22 +57,26 @@ export function DashboardScreen({ onOpenReports }: DashboardScreenProps) {
       <SectionCard
         title={copy.dashboard.lowStockTitle}
         actionLabel={copy.dashboard.lowStockAction}>
-        {lowStockProducts.map(product => (
-          <View key={product.id} style={styles.stockRow}>
-            <View>
-              <Text style={styles.productName}>{product.name}</Text>
-              <Text style={styles.productMeta}>
-                {product.category}
-                {product.attributes.size ? ` · ${product.attributes.size}` : ''}
-              </Text>
+        {lowStockProducts.length > 0 ? (
+          lowStockProducts.map(product => (
+            <View key={product.id} style={styles.stockRow}>
+              <View>
+                <Text style={styles.productName}>{product.name}</Text>
+                <Text style={styles.productMeta}>
+                  {product.category}
+                  {product.attributes?.size ? ` · ${product.attributes.size}` : ''}
+                </Text>
+              </View>
+              <View style={styles.stockBadge}>
+                <Text style={styles.stockBadgeText}>
+                  {copy.dashboard.stockLeft(product.currentStock ?? 0)}
+                </Text>
+              </View>
             </View>
-            <View style={styles.stockBadge}>
-              <Text style={styles.stockBadgeText}>
-                {copy.dashboard.stockLeft(product.currentStock)}
-              </Text>
-            </View>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={styles.promptText}>All current products are above low stock level.</Text>
+        )}
       </SectionCard>
     </Screen>
   );

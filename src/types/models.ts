@@ -46,6 +46,7 @@ export type SaleTransaction = WithRequiredId & {
   quantitySold?: number;
   unitCostPrice?: number;
   unitSellingPrice?: number;
+  actualSoldPrice?: number;
   discountAmount?: number;
   totalRevenue?: number;
   totalProfit?: number;
