@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { DateField } from '../components/DateField';
 import { FeedbackPopup } from '../components/FeedbackPopup';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
@@ -11,14 +12,16 @@ import { colors, radius, spacing } from '../theme';
 import { formatCurrency } from '../utils/currency';
 
 export function SellScreen() {
-  const { products, recordSaleAsync } = useAppStore();
+  const { products, recordSaleAsync, sales } = useAppStore();
   const [feedback, setFeedback] = useState<{
     message: string;
     status: 'error' | 'success';
   } | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [quantityText, setQuantityText] = useState('1');
   const [searchText, setSearchText] = useState('');
   const [selectedProductId, setSelectedProductId] = useState(products[0]?.id ?? '');
+  const [soldAt, setSoldAt] = useState(new Date());
   const [soldPriceText, setSoldPriceText] = useState(
     String(products[0]?.sellingPrice ?? ''),
   );
@@ -54,6 +57,7 @@ export function SellScreen() {
       actualSoldPrice,
       productId: selectedProduct.id,
       quantitySold,
+      soldAt: soldAt.getTime(),
     });
 
     if (!result.success) {
@@ -72,13 +76,25 @@ export function SellScreen() {
     setSearchText('');
     setSelectedProductId(selectedProduct.id);
     setSoldPriceText(String(selectedProduct.sellingPrice ?? ''));
+    setSoldAt(new Date());
+    setIsCreating(false);
   };
 
   return (
     <Screen
       title={copy.sell.title}
-      subtitle={copy.sell.subtitle}
-      footer={<PrimaryButton label={copy.sell.confirmButton} onPress={handleConfirmSale} />}>
+      subtitle={isCreating ? copy.sell.addFormSubtitle : copy.sell.subtitle}
+      headerAction={{
+        label: isCreating ? copy.sell.cancelAction : copy.sell.addAction,
+        onPress: () => setIsCreating(current => !current),
+      }}
+      footer={
+        isCreating ? (
+          <PrimaryButton label={copy.sell.confirmButton} onPress={handleConfirmSale} />
+        ) : undefined
+      }>
+      {isCreating ? (
+        <>
       <SectionCard title={copy.sell.selectProduct}>
         <TextInput
           onChangeText={setSearchText}
@@ -130,11 +146,38 @@ export function SellScreen() {
           style={styles.input}
           value={soldPriceText}
         />
+        <DateField date={soldAt} label={copy.sell.soldDate} onChange={setSoldAt} />
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>{copy.sell.expectedTotal}</Text>
           <Text style={styles.summaryValue}>{formatCurrency(expectedTotal)}</Text>
         </View>
       </SectionCard>
+      </>
+      ) : (
+        <SectionCard title={copy.sell.recentTitle}>
+          {sales.length > 0 ? (
+            sales.map(sale => (
+              <View key={sale.id} style={styles.historyRow}>
+                <View style={styles.historyInfo}>
+                  <Text style={styles.selectionTitle}>{sale.productName}</Text>
+                  <Text style={styles.selectionMeta}>
+                    {sale.quantitySold} sold ·{' '}
+                    {new Date(sale.soldAt ?? Date.now()).toLocaleDateString('en-ET', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </Text>
+                </View>
+                <Text style={styles.historyAmount}>
+                  {formatCurrency(sale.totalRevenue ?? 0)}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.helperText}>{copy.sell.noSales}</Text>
+          )}
+        </SectionCard>
+      )}
       <FeedbackPopup
         message={feedback?.message ?? ''}
         onClose={() => setFeedback(null)}
@@ -192,6 +235,20 @@ const styles = StyleSheet.create({
   summaryValue: {
     color: colors.text,
     fontSize: 24,
+    fontWeight: '800',
+  },
+  historyRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  historyInfo: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  historyAmount: {
+    color: colors.success,
+    fontSize: 16,
     fontWeight: '800',
   },
   helperText: {

@@ -40,11 +40,13 @@ type RecordSaleInput = {
   actualSoldPrice: number;
   productId: string;
   quantitySold: number;
+  soldAt: number;
 };
 
 type AddExpenseInput = {
   amount: number;
   category?: ExpenseCategory;
+  expenseDate: number;
   title: string;
 };
 
@@ -248,7 +250,7 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
           amount: input.amount,
           category: input.category ?? normalizeExpenseCategory(input.title),
           currency: 'ETB',
-          expenseDate: timestamp,
+          expenseDate: input.expenseDate,
           id: createDocumentId('expense'),
           recordedAt: timestamp,
           title: input.title.trim(),
@@ -335,7 +337,7 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
           productName: product.name,
           productSku: product.sku,
           quantitySold: input.quantitySold,
-          soldAt: timestamp,
+          soldAt: input.soldAt,
           totalProfit:
             input.quantitySold * input.actualSoldPrice -
             input.quantitySold * (product.costPrice ?? 0),

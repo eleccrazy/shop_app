@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { DateField } from '../components/DateField';
 import { FeedbackPopup } from '../components/FeedbackPopup';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
@@ -23,10 +24,12 @@ function formatRelativeExpenseTime(timestamp: number) {
 export function ExpensesScreen() {
   const { addExpense, expenses } = useAppStore();
   const [amount, setAmount] = useState('');
+  const [expenseDate, setExpenseDate] = useState(new Date());
   const [feedback, setFeedback] = useState<{
     message: string;
     status: 'error' | 'success';
   } | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState('');
 
   const handleSaveExpense = async () => {
@@ -40,6 +43,7 @@ export function ExpensesScreen() {
 
     const result = await addExpense({
       amount: Number(amount),
+      expenseDate: expenseDate.getTime(),
       title,
     });
 
@@ -53,6 +57,8 @@ export function ExpensesScreen() {
 
     setTitle('');
     setAmount('');
+    setExpenseDate(new Date());
+    setIsCreating(false);
     setFeedback({
       message: copy.expenses.successMessage,
       status: 'success',
@@ -62,9 +68,18 @@ export function ExpensesScreen() {
   return (
     <Screen
       title={copy.expenses.title}
-      subtitle={copy.expenses.subtitle}
-      footer={<PrimaryButton label={copy.expenses.saveButton} onPress={handleSaveExpense} />}>
-      <SectionCard title={copy.expenses.addTitle}>
+      subtitle={isCreating ? copy.expenses.addFormSubtitle : copy.expenses.subtitle}
+      headerAction={{
+        label: isCreating ? copy.expenses.cancelAction : copy.expenses.addAction,
+        onPress: () => setIsCreating(current => !current),
+      }}
+      footer={
+        isCreating ? (
+          <PrimaryButton label={copy.expenses.saveButton} onPress={handleSaveExpense} />
+        ) : undefined
+      }>
+      {isCreating ? (
+        <SectionCard title={copy.expenses.addTitle}>
         <TextInput
           onChangeText={setTitle}
           placeholder={copy.expenses.whatDidYouBuy}
@@ -80,8 +95,13 @@ export function ExpensesScreen() {
           style={styles.input}
           value={amount}
         />
+        <DateField
+          date={expenseDate}
+          label={copy.expenses.expenseDate}
+          onChange={setExpenseDate}
+        />
       </SectionCard>
-
+      ) : (
       <SectionCard title={copy.expenses.recentTitle}>
         {expenses.map(expense => (
           <View key={expense.id} style={styles.row}>
@@ -95,6 +115,7 @@ export function ExpensesScreen() {
           </View>
         ))}
       </SectionCard>
+      )}
       <FeedbackPopup
         message={feedback?.message ?? ''}
         onClose={() => setFeedback(null)}
