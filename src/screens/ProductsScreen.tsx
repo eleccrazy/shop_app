@@ -56,7 +56,7 @@ export function ProductsScreen() {
     setIsCreating(false);
   };
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!name.trim() || !costPrice || !sellingPrice || !currentStock) {
       setFeedback({
         message: 'Fill in all product fields before saving.',
@@ -66,7 +66,7 @@ export function ProductsScreen() {
     }
 
     if (isEditing && editingProductId) {
-      updateProduct({
+      const result = await updateProduct({
         category,
         costPrice: Number(costPrice),
         currentStock: Number(currentStock),
@@ -74,14 +74,30 @@ export function ProductsScreen() {
         name,
         sellingPrice: Number(sellingPrice),
       });
+
+      if (!result.success) {
+        setFeedback({
+          message: result.error ?? 'Unable to update product.',
+          status: 'error',
+        });
+        return;
+      }
     } else {
-      addProduct({
+      const result = await addProduct({
         category,
         costPrice: Number(costPrice),
         currentStock: Number(currentStock),
         name,
         sellingPrice: Number(sellingPrice),
       });
+
+      if (!result.success) {
+        setFeedback({
+          message: result.error ?? 'Unable to save product.',
+          status: 'error',
+        });
+        return;
+      }
     }
 
     resetForm();

@@ -29,7 +29,7 @@ export function ExpensesScreen() {
   } | null>(null);
   const [title, setTitle] = useState('');
 
-  const handleSaveExpense = () => {
+  const handleSaveExpense = async () => {
     if (!title.trim() || !amount) {
       setFeedback({
         message: 'Enter both the expense title and amount.',
@@ -38,10 +38,18 @@ export function ExpensesScreen() {
       return;
     }
 
-    addExpense({
+    const result = await addExpense({
       amount: Number(amount),
       title,
     });
+
+    if (!result.success) {
+      setFeedback({
+        message: result.error ?? 'Unable to save expense.',
+        status: 'error',
+      });
+      return;
+    }
 
     setTitle('');
     setAmount('');

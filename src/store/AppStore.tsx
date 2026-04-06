@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useMemo, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 
 import {
-  activityFeed as initialActivityFeed,
-  expenses as initialExpenses,
-  products as initialProducts,
-  sales as initialSales,
-} from '../data/mockData';
+  insertExpenseWithActivity,
+  insertProduct,
+  insertSaleAndAdjustStock,
+  loadDatabaseState,
+  updateProductRecord,
+} from '../db/database';
 import type {
   ActivityEntry,
   Expense,
@@ -48,29 +49,47 @@ type AddExpenseInput = {
 };
 
 type AppStoreValue = AppState & {
-  addExpense: (input: AddExpenseInput) => void;
-  addProduct: (input: AddProductInput) => void;
+  addExpense: (input: AddExpenseInput) => Promise<{ error?: string; success: boolean }>;
+  addProduct: (input: AddProductInput) => Promise<{ error?: string; success: boolean }>;
+  isHydrated: boolean;
   lowStockProducts: Product[];
   recordSale: (input: RecordSaleInput) => { error?: string; success: boolean };
+  recordSaleAsync: (
+    input: RecordSaleInput,
+  ) => Promise<{ error?: string; success: boolean }>;
   todaysExpensesTotal: number;
   todaysProfitTotal: number;
   todaysSalesTotal: number;
-  updateProduct: (input: UpdateProductInput) => void;
+  updateProduct: (
+    input: UpdateProductInput,
+  ) => Promise<{ error?: string; success: boolean }>;
 };
 
 type Action =
-  | { type: 'ADD_PRODUCT'; payload: AddProductInput }
+  | { type: 'HYDRATE'; payload: AppState }
+  | { type: 'ADD_PRODUCT'; payload: { product: Product } }
   | { type: 'UPDATE_PRODUCT'; payload: UpdateProductInput }
-  | { type: 'ADD_EXPENSE'; payload: AddExpenseInput }
-  | { type: 'RECORD_SALE'; payload: RecordSaleInput };
+  | {
+      type: 'ADD_EXPENSE';
+      payload: { activityEntry: ActivityEntry; expense: Expense };
+    }
+  | {
+      type: 'RECORD_SALE';
+      payload: {
+        activityEntry: ActivityEntry;
+        productId: string;
+        quantitySold: number;
+        sale: SaleTransaction;
+      };
+    };
 
 const AppStoreContext = createContext<AppStoreValue | null>(null);
 
 const initialState: AppState = {
-  activityFeed: initialActivityFeed,
-  expenses: initialExpenses,
-  products: initialProducts,
-  sales: initialSales,
+  activityFeed: [],
+  expenses: [],
+  products: [],
+  sales: [],
 };
 
 function formatTimestamp(timestamp: number) {
@@ -106,25 +125,12 @@ function normalizeExpenseCategory(title: string): ExpenseCategory {
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'HYDRATE':
+      return action.payload;
     case 'ADD_PRODUCT': {
-      const timestamp = Date.now();
-      const newProduct: Product = {
-        id: createDocumentId('product'),
-        attributes: {},
-        category: action.payload.category,
-        costPrice: action.payload.costPrice,
-        createdAt: timestamp,
-        currentStock: action.payload.currentStock,
-        isActive: true,
-        lowStockThreshold: 5,
-        name: action.payload.name.trim(),
-        sellingPrice: action.payload.sellingPrice,
-        updatedAt: timestamp,
-      };
-
       return {
         ...state,
-        products: [newProduct, ...state.products],
+        products: [action.payload.product, ...state.products],
       };
     }
     case 'UPDATE_PRODUCT': {
@@ -150,29 +156,10 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
     case 'ADD_EXPENSE': {
-      const timestamp = Date.now();
-      const newExpense: Expense = {
-        amount: action.payload.amount,
-        category:
-          action.payload.category ?? normalizeExpenseCategory(action.payload.title),
-        currency: 'ETB',
-        expenseDate: timestamp,
-        id: createDocumentId('expense'),
-        recordedAt: timestamp,
-        title: action.payload.title.trim(),
-      };
-      const activityEntry: ActivityEntry = {
-        amount: newExpense.amount,
-        id: createDocumentId('activity'),
-        timestamp: formatTimestamp(timestamp),
-        title: `Bought ${newExpense.title}`,
-        type: 'expense',
-      };
-
       return {
         ...state,
-        activityFeed: [activityEntry, ...state.activityFeed],
-        expenses: [newExpense, ...state.expenses],
+        activityFeed: [action.payload.activityEntry, ...state.activityFeed],
+        expenses: [action.payload.expense, ...state.expenses],
       };
     }
     case 'RECORD_SALE': {
@@ -185,8 +172,6 @@ function reducer(state: AppState, action: Action): AppState {
       }
 
       const currentStock = product.currentStock ?? 0;
-      const costPrice = product.costPrice ?? 0;
-      const sellingPrice = action.payload.actualSoldPrice;
       const quantitySold = action.payload.quantitySold;
       const timestamp = Date.now();
 
@@ -206,39 +191,11 @@ function reducer(state: AppState, action: Action): AppState {
         };
       });
 
-      const totalRevenue = quantitySold * sellingPrice;
-      const totalProfit = totalRevenue - quantitySold * costPrice;
-
-      const sale: SaleTransaction = {
-        category: product.category,
-        currency: 'ETB',
-        id: createDocumentId('sale'),
-        productAttributesSnapshot: product.attributes,
-        productId: product.id,
-        productName: product.name,
-        productSku: product.sku,
-        actualSoldPrice: sellingPrice,
-        quantitySold,
-        soldAt: timestamp,
-        totalProfit,
-        totalRevenue,
-        unitCostPrice: costPrice,
-        unitSellingPrice: sellingPrice,
-      };
-
-      const activityEntry: ActivityEntry = {
-        amount: totalRevenue,
-        id: createDocumentId('activity'),
-        timestamp: formatTimestamp(timestamp),
-        title: `Sold ${quantitySold} ${product.name}`,
-        type: 'sale',
-      };
-
       return {
         ...state,
-        activityFeed: [activityEntry, ...state.activityFeed],
+        activityFeed: [action.payload.activityEntry, ...state.activityFeed],
         products: updatedProducts,
-        sales: [sale, ...state.sales],
+        sales: [action.payload.sale, ...state.sales],
       };
     }
     default:
@@ -248,6 +205,30 @@ function reducer(state: AppState, action: Action): AppState {
 
 export function AppStoreProvider({ children }: React.PropsWithChildren) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [isHydrated, setIsHydrated] = React.useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadDatabaseState()
+      .then(data => {
+        if (!mounted) {
+          return;
+        }
+
+        dispatch({ type: 'HYDRATE', payload: data });
+        setIsHydrated(true);
+      })
+      .catch(() => {
+        if (mounted) {
+          setIsHydrated(true);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const value = useMemo<AppStoreValue>(() => {
     const startOfToday = new Date();
@@ -261,17 +242,69 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
 
     return {
       ...state,
-      addExpense: input => {
-        dispatch({ type: 'ADD_EXPENSE', payload: input });
+      addExpense: async input => {
+        const timestamp = Date.now();
+        const expense: Expense = {
+          amount: input.amount,
+          category: input.category ?? normalizeExpenseCategory(input.title),
+          currency: 'ETB',
+          expenseDate: timestamp,
+          id: createDocumentId('expense'),
+          recordedAt: timestamp,
+          title: input.title.trim(),
+        };
+        const activityEntry: ActivityEntry = {
+          amount: expense.amount,
+          id: createDocumentId('activity'),
+          timestamp: formatTimestamp(timestamp),
+          title: `Bought ${expense.title}`,
+          type: 'expense',
+        };
+
+        try {
+          await insertExpenseWithActivity(expense, activityEntry);
+          dispatch({
+            type: 'ADD_EXPENSE',
+            payload: { activityEntry, expense },
+          });
+          return { success: true };
+        } catch {
+          return { error: 'Unable to save expense locally.', success: false };
+        }
       },
-      addProduct: input => {
-        dispatch({ type: 'ADD_PRODUCT', payload: input });
+      addProduct: async input => {
+        const timestamp = Date.now();
+        const product: Product = {
+          id: createDocumentId('product'),
+          attributes: {},
+          category: input.category,
+          costPrice: input.costPrice,
+          createdAt: timestamp,
+          currentStock: input.currentStock,
+          isActive: true,
+          lowStockThreshold: 5,
+          name: input.name.trim(),
+          sellingPrice: input.sellingPrice,
+          updatedAt: timestamp,
+        };
+
+        try {
+          await insertProduct(product);
+          dispatch({ type: 'ADD_PRODUCT', payload: { product } });
+          return { success: true };
+        } catch {
+          return { error: 'Unable to save product locally.', success: false };
+        }
       },
+      isHydrated,
       lowStockProducts: state.products.filter(
         product =>
           (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0),
       ),
-      recordSale: input => {
+      recordSale: _input => {
+        return { error: 'Use recordSaleAsync for persistence.', success: false };
+      },
+      recordSaleAsync: async input => {
         const product = state.products.find(item => item.id === input.productId);
         const currentStock = product?.currentStock ?? 0;
 
@@ -287,9 +320,56 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
         if (input.quantitySold > currentStock) {
           return { error: 'Not enough stock available.', success: false };
         }
+        if (!product?.id || !product.name || !product.category) {
+          return { error: 'Selected product is invalid.', success: false };
+        }
 
-        dispatch({ type: 'RECORD_SALE', payload: input });
-        return { success: true };
+        const timestamp = Date.now();
+        const sale: SaleTransaction = {
+          actualSoldPrice: input.actualSoldPrice,
+          category: product.category,
+          currency: 'ETB',
+          id: createDocumentId('sale'),
+          productAttributesSnapshot: product.attributes,
+          productId: product.id,
+          productName: product.name,
+          productSku: product.sku,
+          quantitySold: input.quantitySold,
+          soldAt: timestamp,
+          totalProfit:
+            input.quantitySold * input.actualSoldPrice -
+            input.quantitySold * (product.costPrice ?? 0),
+          totalRevenue: input.quantitySold * input.actualSoldPrice,
+          unitCostPrice: product.costPrice ?? 0,
+          unitSellingPrice: input.actualSoldPrice,
+        };
+        const activityEntry: ActivityEntry = {
+          amount: sale.totalRevenue,
+          id: createDocumentId('activity'),
+          timestamp: formatTimestamp(timestamp),
+          title: `Sold ${input.quantitySold} ${product.name}`,
+          type: 'sale',
+        };
+
+        try {
+          await insertSaleAndAdjustStock(
+            sale,
+            activityEntry,
+            currentStock - input.quantitySold,
+          );
+          dispatch({
+            type: 'RECORD_SALE',
+            payload: {
+              activityEntry,
+              productId: input.productId,
+              quantitySold: input.quantitySold,
+              sale,
+            },
+          });
+          return { success: true };
+        } catch {
+          return { error: 'Unable to save sale locally.', success: false };
+        }
       },
       todaysExpensesTotal: todaysExpenses.reduce(
         (total, expense) => total + (expense.amount ?? 0),
@@ -303,11 +383,33 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
         (total, sale) => total + (sale.totalRevenue ?? 0),
         0,
       ),
-      updateProduct: input => {
-        dispatch({ type: 'UPDATE_PRODUCT', payload: input });
+      updateProduct: async input => {
+        const existingProduct = state.products.find(product => product.id === input.id);
+
+        if (!existingProduct) {
+          return { error: 'Product not found.', success: false };
+        }
+
+        const updatedProduct: Product = {
+          ...existingProduct,
+          category: input.category,
+          costPrice: input.costPrice,
+          currentStock: input.currentStock,
+          name: input.name.trim(),
+          sellingPrice: input.sellingPrice,
+          updatedAt: Date.now(),
+        };
+
+        try {
+          await updateProductRecord(updatedProduct);
+          dispatch({ type: 'UPDATE_PRODUCT', payload: input });
+          return { success: true };
+        } catch {
+          return { error: 'Unable to update product locally.', success: false };
+        }
       },
     };
-  }, [state]);
+  }, [isHydrated, state]);
 
   return (
     <AppStoreContext.Provider value={value}>{children}</AppStoreContext.Provider>

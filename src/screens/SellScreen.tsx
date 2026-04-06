@@ -11,7 +11,7 @@ import { colors, radius, spacing } from '../theme';
 import { formatCurrency } from '../utils/currency';
 
 export function SellScreen() {
-  const { products, recordSale } = useAppStore();
+  const { products, recordSaleAsync } = useAppStore();
   const [feedback, setFeedback] = useState<{
     message: string;
     status: 'error' | 'success';
@@ -41,7 +41,7 @@ export function SellScreen() {
   const actualSoldPrice = Number(soldPriceText) || 0;
   const expectedTotal = actualSoldPrice * quantitySold;
 
-  const handleConfirmSale = () => {
+  const handleConfirmSale = async () => {
     if (!selectedProduct?.id) {
       setFeedback({
         message: 'Select a product first.',
@@ -50,7 +50,7 @@ export function SellScreen() {
       return;
     }
 
-    const result = recordSale({
+    const result = await recordSaleAsync({
       actualSoldPrice,
       productId: selectedProduct.id,
       quantitySold,
