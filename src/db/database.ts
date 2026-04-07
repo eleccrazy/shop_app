@@ -508,3 +508,20 @@ export async function saveProductCategories(productCategories: string[]) {
     ['productCategories', JSON.stringify(productCategories)],
   );
 }
+
+export async function renameProductCategory(
+  oldCategory: string,
+  newCategory: string,
+  nextCategories: string[],
+) {
+  await runTransaction(tx => {
+    tx.executeSql(
+      'UPDATE products SET category = ?, updated_at = ? WHERE category = ?',
+      [newCategory, Date.now(), oldCategory],
+    );
+    tx.executeSql(
+      'INSERT OR REPLACE INTO app_settings (key, value_json) VALUES (?, ?)',
+      ['productCategories', JSON.stringify(nextCategories)],
+    );
+  });
+}

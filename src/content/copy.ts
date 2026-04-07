@@ -96,9 +96,11 @@ export const copy = {
     saveButton: 'Save Category',
     backButton: 'Back to Dashboard',
     successMessage: 'Category saved.',
-    removeSuccessMessage: 'Category removed.',
+    renameSuccessMessage: 'Category renamed.',
     emptyState: 'No custom categories yet.',
-    removeLabel: 'Remove',
+    editLabel: 'Edit',
+    renamePlaceholder: 'Rename category',
+    renameButton: 'Save Name',
   },
   tabs: {
     home: 'Home',

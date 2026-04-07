@@ -5,6 +5,7 @@ import {
   insertProduct,
   insertSaleAndAdjustStock,
   loadDatabaseState,
+  renameProductCategory,
   saveProductCategories,
   updateProductRecord,
 } from '../db/database';
@@ -60,12 +61,13 @@ type AppStoreValue = AppState & {
   addProduct: (input: AddProductInput) => Promise<{ error?: string; success: boolean }>;
   isHydrated: boolean;
   lowStockProducts: Product[];
+  renameStoredProductCategory: (
+    previousCategory: string,
+    nextCategory: string,
+  ) => Promise<{ error?: string; success: boolean }>;
   recordSale: (input: RecordSaleInput) => { error?: string; success: boolean };
   recordSaleAsync: (
     input: RecordSaleInput,
-  ) => Promise<{ error?: string; success: boolean }>;
-  removeProductCategory: (
-    category: string,
   ) => Promise<{ error?: string; success: boolean }>;
   todaysExpensesTotal: number;
   todaysProfitTotal: number;
@@ -79,7 +81,10 @@ type Action =
   | { type: 'HYDRATE'; payload: AppState }
   | { type: 'ADD_PRODUCT'; payload: { product: Product } }
   | { type: 'ADD_PRODUCT_CATEGORY'; payload: string }
-  | { type: 'REMOVE_PRODUCT_CATEGORY'; payload: string }
+  | {
+      type: 'RENAME_PRODUCT_CATEGORY';
+      payload: { nextCategory: string; previousCategory: string };
+    }
   | { type: 'UPDATE_PRODUCT'; payload: UpdateProductInput }
   | {
       type: 'ADD_EXPENSE';
@@ -161,16 +166,21 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
     }
-    case 'REMOVE_PRODUCT_CATEGORY': {
-      const nextCategories = state.settings.productCategories.filter(
-        category => category !== action.payload,
-      );
-
+    case 'RENAME_PRODUCT_CATEGORY': {
       return {
         ...state,
+        products: state.products.map(product =>
+          product.category === action.payload.previousCategory
+            ? { ...product, category: action.payload.nextCategory }
+            : product,
+        ),
         settings: {
           ...state.settings,
-          productCategories: nextCategories.length > 0 ? nextCategories : ['Other'],
+          productCategories: state.settings.productCategories.map(category =>
+            category === action.payload.previousCategory
+              ? action.payload.nextCategory
+              : category,
+          ),
         },
       };
     }
@@ -365,6 +375,38 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
         product =>
           (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0),
       ),
+      renameStoredProductCategory: async (previousCategory, nextCategory) => {
+        const normalizedCategory = nextCategory.trim();
+
+        if (!normalizedCategory) {
+          return { error: 'Enter a category name first.', success: false };
+        }
+        if (previousCategory === normalizedCategory) {
+          return { success: true };
+        }
+        if (state.settings.productCategories.includes(normalizedCategory)) {
+          return { error: 'That category already exists.', success: false };
+        }
+
+        const nextCategories = state.settings.productCategories.map(category =>
+          category === previousCategory ? normalizedCategory : category,
+        );
+
+        try {
+          await renameProductCategory(
+            previousCategory,
+            normalizedCategory,
+            nextCategories,
+          );
+          dispatch({
+            type: 'RENAME_PRODUCT_CATEGORY',
+            payload: { nextCategory: normalizedCategory, previousCategory },
+          });
+          return { success: true };
+        } catch {
+          return { error: 'Unable to rename category locally.', success: false };
+        }
+      },
       recordSale: _input => {
         return { error: 'Use recordSaleAsync for persistence.', success: false };
       },
@@ -433,31 +475,6 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
           return { success: true };
         } catch {
           return { error: 'Unable to save sale locally.', success: false };
-        }
-      },
-      removeProductCategory: async category => {
-        if (category === 'Other') {
-          return { error: 'The starter category cannot be removed.', success: false };
-        }
-        if (
-          state.products.some(product => (product.category ?? 'Other') === category)
-        ) {
-          return {
-            error: 'This category is still in use by existing products.',
-            success: false,
-          };
-        }
-
-        const nextCategories = state.settings.productCategories.filter(
-          currentCategory => currentCategory !== category,
-        );
-
-        try {
-          await saveProductCategories(nextCategories);
-          dispatch({ type: 'REMOVE_PRODUCT_CATEGORY', payload: category });
-          return { success: true };
-        } catch {
-          return { error: 'Unable to remove category locally.', success: false };
         }
       },
       todaysExpensesTotal: todaysExpenses.reduce(

@@ -14,12 +14,14 @@ type SettingsScreenProps = {
 };
 
 export function SettingsScreen({ onBack }: SettingsScreenProps) {
-  const { addProductCategory, removeProductCategory, settings } = useAppStore();
+  const { addProductCategory, renameStoredProductCategory, settings } = useAppStore();
   const [categoryName, setCategoryName] = useState('');
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     message: string;
     status: 'error' | 'success';
   } | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const handleAddCategory = async () => {
     const result = await addProductCategory(categoryName);
@@ -39,19 +41,25 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     });
   };
 
-  const handleRemoveCategory = async (category: string) => {
-    const result = await removeProductCategory(category);
+  const handleRenameCategory = async () => {
+    if (!editingCategory) {
+      return;
+    }
+
+    const result = await renameStoredProductCategory(editingCategory, renameValue);
 
     if (!result.success) {
       setFeedback({
-        message: result.error ?? 'Unable to remove category.',
+        message: result.error ?? 'Unable to rename category.',
         status: 'error',
       });
       return;
     }
 
+    setEditingCategory(null);
+    setRenameValue('');
     setFeedback({
-      message: copy.settings.removeSuccessMessage,
+      message: copy.settings.renameSuccessMessage,
       status: 'success',
     });
   };
@@ -82,11 +90,32 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
         {settings.productCategories.length > 0 ? (
           settings.productCategories.map(category => (
             <View key={category} style={styles.row}>
-              <Text style={styles.categoryName}>{category}</Text>
+              <View style={styles.categoryTextWrap}>
+                <Text style={styles.categoryName}>{category}</Text>
+                {editingCategory === category ? (
+                  <View style={styles.renameRow}>
+                    <TextInput
+                      onChangeText={setRenameValue}
+                      placeholder={copy.settings.renamePlaceholder}
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.renameInput}
+                      value={renameValue}
+                    />
+                    <Pressable
+                      onPress={handleRenameCategory}
+                      style={styles.editChip}>
+                      <Text style={styles.editChipText}>{copy.settings.renameButton}</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
               <Pressable
-                onPress={() => handleRemoveCategory(category)}
-                style={styles.removeChip}>
-                <Text style={styles.removeChipText}>{copy.settings.removeLabel}</Text>
+                onPress={() => {
+                  setEditingCategory(category);
+                  setRenameValue(category);
+                }}
+                style={styles.editChip}>
+                <Text style={styles.editChipText}>{copy.settings.editLabel}</Text>
               </Pressable>
             </View>
           ))
@@ -117,23 +146,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   row: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  categoryTextWrap: {
+    flex: 1,
+    paddingRight: spacing.md,
   },
   categoryName: {
     color: colors.text,
     fontSize: 16,
     fontWeight: '700',
   },
-  removeChip: {
-    backgroundColor: '#F9E0DC',
+  renameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  renameInput: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    color: colors.text,
+    flex: 1,
+    fontSize: 14,
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
+  editChip: {
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  removeChipText: {
-    color: colors.danger,
+  editChipText: {
+    color: colors.text,
     fontSize: 12,
     fontWeight: '800',
   },

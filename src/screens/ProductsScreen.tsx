@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { FeedbackPopup } from '../components/FeedbackPopup';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SelectField } from '../components/SelectField';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
 import { copy } from '../content/copy';
@@ -166,29 +167,12 @@ export function ProductsScreen() {
             value={name}
           />
 
-          <View style={styles.filterHeader}>
-            <Text style={styles.filterLabel}>{copy.products.categoryField}</Text>
-          </View>
-          <View style={styles.filterRow}>
-            {categoryOptions.slice(1).map(option => {
-              const active = option === category;
-
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() => setCategory(option)}
-                  style={[styles.filterChip, active && styles.activeFilterChip]}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      active && styles.activeFilterChipText,
-                    ]}>
-                    {option}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <SelectField
+            label={copy.products.categoryField}
+            onSelect={setCategory}
+            options={categoryOptions.slice(1)}
+            value={category}
+          />
           <Text style={styles.helperText}>{copy.products.categoryHelp}</Text>
 
           <TextInput
