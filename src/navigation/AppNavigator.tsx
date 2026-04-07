@@ -7,20 +7,24 @@ import { ExpensesScreen } from '../screens/ExpensesScreen';
 import { ProductsScreen } from '../screens/ProductsScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
 import { SellScreen } from '../screens/SellScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { colors, spacing } from '../theme';
 
-type RouteKey = TabKey | 'reports';
+type RouteKey = TabKey | 'reports' | 'settings';
 
 export function AppNavigator() {
   const [route, setRoute] = useState<RouteKey>('dashboard');
   const activeTab: TabKey =
-    route === 'reports' ? 'dashboard' : route;
+    route === 'reports' || route === 'settings' ? 'dashboard' : route;
 
   return (
     <View style={styles.container}>
       <View style={styles.screen}>
         {route === 'dashboard' ? (
-          <DashboardScreen onOpenReports={() => setRoute('reports')} />
+          <DashboardScreen
+            onOpenReports={() => setRoute('reports')}
+            onOpenSettings={() => setRoute('settings')}
+          />
         ) : null}
         {route === 'products' ? <ProductsScreen /> : null}
         {route === 'sell' ? <SellScreen /> : null}
@@ -28,9 +32,12 @@ export function AppNavigator() {
         {route === 'reports' ? (
           <ReportsScreen onBack={() => setRoute('dashboard')} />
         ) : null}
+        {route === 'settings' ? (
+          <SettingsScreen onBack={() => setRoute('dashboard')} />
+        ) : null}
       </View>
 
-      {route !== 'reports' ? (
+      {route !== 'reports' && route !== 'settings' ? (
         <View style={styles.tabContainer}>
           <TabBar activeTab={activeTab} onTabPress={setRoute} />
         </View>

@@ -6,7 +6,13 @@ import {
   products as seedProducts,
   sales as seedSales,
 } from '../data/mockData';
-import type { ActivityEntry, Expense, Product, SaleTransaction } from '../types/models';
+import type {
+  ActivityEntry,
+  AppSettings,
+  Expense,
+  Product,
+  SaleTransaction,
+} from '../types/models';
 
 SQLite.enablePromise(false);
 
@@ -15,6 +21,7 @@ type DatabaseShape = {
   expenses: Expense[];
   products: Product[];
   sales: SaleTransaction[];
+  settings: AppSettings;
 };
 
 type SQLiteDatabase = {
@@ -49,6 +56,7 @@ type SQLiteTransaction = {
 };
 
 const DB_NAME = 'shopapp.db';
+const DEFAULT_PRODUCT_CATEGORIES = ['Other'];
 
 let databaseInstance: SQLiteDatabase | null = null;
 
@@ -189,6 +197,13 @@ function mapActivityRow(row: Record<string, unknown>): ActivityEntry {
 
 export async function initializeDatabase() {
   await executeSql(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value_json TEXT NOT NULL
+    )
+  `);
+
+  await executeSql(`
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
@@ -250,6 +265,17 @@ export async function initializeDatabase() {
 
   const countResult = await executeSql('SELECT COUNT(*) as count FROM products');
   const count = Number(countResult.rows.item(0)?.count ?? 0);
+  const settingsResult = await executeSql(
+    "SELECT COUNT(*) as count FROM app_settings WHERE key = 'productCategories'",
+  );
+  const settingsCount = Number(settingsResult.rows.item(0)?.count ?? 0);
+
+  if (settingsCount === 0) {
+    await executeSql(
+      'INSERT INTO app_settings (key, value_json) VALUES (?, ?)',
+      ['productCategories', JSON.stringify(DEFAULT_PRODUCT_CATEGORIES)],
+    );
+  }
 
   if (count > 0) {
     return;
@@ -332,19 +358,27 @@ export async function initializeDatabase() {
 export async function loadDatabaseState(): Promise<DatabaseShape> {
   await initializeDatabase();
 
-  const [productsResult, salesResult, expensesResult, activityResult] =
+  const [productsResult, salesResult, expensesResult, activityResult, settingsResult] =
     await Promise.all([
       executeSql('SELECT * FROM products ORDER BY created_at DESC'),
       executeSql('SELECT * FROM sales ORDER BY sold_at DESC'),
       executeSql('SELECT * FROM expenses ORDER BY expense_date DESC'),
       executeSql('SELECT * FROM activity_logs ORDER BY created_at DESC'),
+      executeSql("SELECT value_json FROM app_settings WHERE key = 'productCategories'"),
     ]);
+
+  const settingsRow = settingsResult.rows.length > 0 ? settingsResult.rows.item(0) : null;
 
   return {
     activityFeed: getRowArray<Record<string, unknown>>(activityResult).map(mapActivityRow),
     expenses: getRowArray<Record<string, unknown>>(expensesResult).map(mapExpenseRow),
     products: getRowArray<Record<string, unknown>>(productsResult).map(mapProductRow),
     sales: getRowArray<Record<string, unknown>>(salesResult).map(mapSaleRow),
+    settings: {
+      productCategories: settingsRow?.value_json
+        ? JSON.parse(String(settingsRow.value_json))
+        : DEFAULT_PRODUCT_CATEGORIES,
+    },
   };
 }
 
@@ -466,4 +500,11 @@ export async function insertSaleAndAdjustStock(
       ],
     );
   });
+}
+
+export async function saveProductCategories(productCategories: string[]) {
+  await executeSql(
+    'INSERT OR REPLACE INTO app_settings (key, value_json) VALUES (?, ?)',
+    ['productCategories', JSON.stringify(productCategories)],
+  );
 }

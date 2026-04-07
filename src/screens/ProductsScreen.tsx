@@ -10,20 +10,10 @@ import { useAppStore } from '../store/AppStore';
 import { colors, spacing } from '../theme';
 import { formatCurrency } from '../utils/currency';
 import { radius } from '../theme';
-import type { ProductCategory } from '../types/models';
-
-const categoryOptions: Array<ProductCategory | 'All'> = [
-  'All',
-  'Baby (0-24M)',
-  'Toddler (2-5Y)',
-  'Kids (6-12Y)',
-  'Shoes',
-  'Accessories',
-];
 
 export function ProductsScreen() {
-  const { addProduct, products, updateProduct } = useAppStore();
-  const [category, setCategory] = useState<ProductCategory>('Kids (6-12Y)');
+  const { addProduct, products, settings, updateProduct } = useAppStore();
+  const [category, setCategory] = useState('Other');
   const [costPrice, setCostPrice] = useState('');
   const [currentStock, setCurrentStock] = useState('');
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -33,8 +23,18 @@ export function ProductsScreen() {
   } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<ProductCategory | 'All'>('All');
+  const [selectedFilter, setSelectedFilter] = useState('All');
   const [sellingPrice, setSellingPrice] = useState('');
+
+  const categoryOptions = useMemo(() => {
+    const options = ['All', ...settings.productCategories];
+
+    if (category && !options.includes(category)) {
+      options.push(category);
+    }
+
+    return options;
+  }, [category, settings.productCategories]);
 
   const filteredProducts = useMemo(() => {
     if (selectedFilter === 'All') {
@@ -47,7 +47,7 @@ export function ProductsScreen() {
   const isEditing = editingProductId !== null;
 
   const resetForm = () => {
-    setCategory('Kids (6-12Y)');
+    setCategory('Other');
     setName('');
     setCostPrice('');
     setSellingPrice('');
@@ -125,7 +125,7 @@ export function ProductsScreen() {
     }
 
     setEditingProductId(product.id);
-    setCategory(product.category ?? 'Kids (6-12Y)');
+    setCategory(product.category ?? 'Other');
     setName(product.name ?? '');
     setCostPrice(String(product.costPrice ?? ''));
     setSellingPrice(String(product.sellingPrice ?? ''));
@@ -189,6 +189,7 @@ export function ProductsScreen() {
               );
             })}
           </View>
+          <Text style={styles.helperText}>{copy.products.categoryHelp}</Text>
 
           <TextInput
             keyboardType="numeric"
@@ -344,6 +345,10 @@ const styles = StyleSheet.create({
   },
   activeFilterChipText: {
     color: colors.surface,
+  },
+  helperText: {
+    color: colors.textMuted,
+    fontSize: 13,
   },
   productInfo: {
     flex: 1,

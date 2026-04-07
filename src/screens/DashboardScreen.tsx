@@ -12,9 +12,13 @@ import { formatCurrency } from '../utils/currency';
 
 type DashboardScreenProps = {
   onOpenReports: () => void;
+  onOpenSettings: () => void;
 };
 
-export function DashboardScreen({ onOpenReports }: DashboardScreenProps) {
+export function DashboardScreen({
+  onOpenReports,
+  onOpenSettings,
+}: DashboardScreenProps) {
   const {
     lowStockProducts,
     todaysExpensesTotal,
@@ -51,6 +55,11 @@ export function DashboardScreen({ onOpenReports }: DashboardScreenProps) {
             {copy.dashboard.detailsText}
           </Text>
           <PrimaryButton label={copy.dashboard.openReports} onPress={onOpenReports} />
+          <PrimaryButton
+            label={copy.dashboard.openSettings}
+            onPress={onOpenSettings}
+            variant="ghost"
+          />
         </SectionCard>
       </View>
 

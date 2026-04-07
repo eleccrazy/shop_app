@@ -14,7 +14,7 @@ export const products = [
     id: 'p1',
     name: 'Mickey Mouse T-Shirt',
     sku: 'KID-TS-001',
-    category: 'Kids (6-12Y)',
+    category: 'Other',
     subCategory: 'Tops',
     attributes: {
       size: '8Y',
@@ -35,7 +35,7 @@ export const products = [
     id: 'p2',
     name: 'Baby Winter Coat',
     sku: 'BABY-CT-002',
-    category: 'Baby (0-24M)',
+    category: 'Other',
     subCategory: 'Outerwear',
     attributes: {
       size: '12M',
@@ -56,7 +56,7 @@ export const products = [
     id: 'p3',
     name: 'School Uniform Trouser',
     sku: 'UNI-TR-003',
-    category: 'Kids (6-12Y)',
+    category: 'Other',
     subCategory: 'School Uniform',
     attributes: {
       size: '10Y',
@@ -77,7 +77,7 @@ export const products = [
     id: 'p4',
     name: 'Kids Canvas Shoes',
     sku: 'SHOE-004',
-    category: 'Shoes',
+    category: 'Other',
     subCategory: 'Casual',
     attributes: {
       size: 'EU 31',
@@ -101,7 +101,7 @@ export const sales = [
     productId: 'p1',
     productName: 'Mickey Mouse T-Shirt',
     productSku: 'KID-TS-001',
-    category: 'Kids (6-12Y)',
+    category: 'Other',
     productAttributesSnapshot: {
       size: '8Y',
       color: 'Red',
@@ -120,7 +120,7 @@ export const sales = [
     productId: 'p3',
     productName: 'School Uniform Trouser',
     productSku: 'UNI-TR-003',
-    category: 'Kids (6-12Y)',
+    category: 'Other',
     productAttributesSnapshot: {
       size: '10Y',
       color: 'Navy Blue',

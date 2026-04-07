@@ -5,14 +5,15 @@ import {
   insertProduct,
   insertSaleAndAdjustStock,
   loadDatabaseState,
+  saveProductCategories,
   updateProductRecord,
 } from '../db/database';
 import type {
   ActivityEntry,
+  AppSettings,
   Expense,
   ExpenseCategory,
   Product,
-  ProductCategory,
   SaleTransaction,
 } from '../types/models';
 import { createDocumentId } from '../utils/id';
@@ -22,10 +23,11 @@ type AppState = {
   expenses: Expense[];
   products: Product[];
   sales: SaleTransaction[];
+  settings: AppSettings;
 };
 
 type AddProductInput = {
-  category: ProductCategory;
+  category: string;
   costPrice: number;
   currentStock: number;
   name: string;
@@ -51,6 +53,9 @@ type AddExpenseInput = {
 };
 
 type AppStoreValue = AppState & {
+  addProductCategory: (
+    category: string,
+  ) => Promise<{ error?: string; success: boolean }>;
   addExpense: (input: AddExpenseInput) => Promise<{ error?: string; success: boolean }>;
   addProduct: (input: AddProductInput) => Promise<{ error?: string; success: boolean }>;
   isHydrated: boolean;
@@ -58,6 +63,9 @@ type AppStoreValue = AppState & {
   recordSale: (input: RecordSaleInput) => { error?: string; success: boolean };
   recordSaleAsync: (
     input: RecordSaleInput,
+  ) => Promise<{ error?: string; success: boolean }>;
+  removeProductCategory: (
+    category: string,
   ) => Promise<{ error?: string; success: boolean }>;
   todaysExpensesTotal: number;
   todaysProfitTotal: number;
@@ -70,6 +78,8 @@ type AppStoreValue = AppState & {
 type Action =
   | { type: 'HYDRATE'; payload: AppState }
   | { type: 'ADD_PRODUCT'; payload: { product: Product } }
+  | { type: 'ADD_PRODUCT_CATEGORY'; payload: string }
+  | { type: 'REMOVE_PRODUCT_CATEGORY'; payload: string }
   | { type: 'UPDATE_PRODUCT'; payload: UpdateProductInput }
   | {
       type: 'ADD_EXPENSE';
@@ -92,6 +102,9 @@ const initialState: AppState = {
   expenses: [],
   products: [],
   sales: [],
+  settings: {
+    productCategories: ['Other'],
+  },
 };
 
 function formatTimestamp(timestamp: number) {
@@ -133,6 +146,32 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         products: [action.payload.product, ...state.products],
+      };
+    }
+    case 'ADD_PRODUCT_CATEGORY': {
+      if (state.settings.productCategories.includes(action.payload)) {
+        return state;
+      }
+
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          productCategories: [...state.settings.productCategories, action.payload],
+        },
+      };
+    }
+    case 'REMOVE_PRODUCT_CATEGORY': {
+      const nextCategories = state.settings.productCategories.filter(
+        category => category !== action.payload,
+      );
+
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          productCategories: nextCategories.length > 0 ? nextCategories : ['Other'],
+        },
       };
     }
     case 'UPDATE_PRODUCT': {
@@ -244,6 +283,29 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
 
     return {
       ...state,
+      addProductCategory: async category => {
+        const normalizedCategory = category.trim();
+
+        if (!normalizedCategory) {
+          return { error: 'Enter a category name first.', success: false };
+        }
+        if (state.settings.productCategories.includes(normalizedCategory)) {
+          return { error: 'That category already exists.', success: false };
+        }
+
+        const nextCategories = [
+          ...state.settings.productCategories,
+          normalizedCategory,
+        ];
+
+        try {
+          await saveProductCategories(nextCategories);
+          dispatch({ type: 'ADD_PRODUCT_CATEGORY', payload: normalizedCategory });
+          return { success: true };
+        } catch {
+          return { error: 'Unable to save category locally.', success: false };
+        }
+      },
       addExpense: async input => {
         const timestamp = Date.now();
         const expense: Expense = {
@@ -371,6 +433,31 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
           return { success: true };
         } catch {
           return { error: 'Unable to save sale locally.', success: false };
+        }
+      },
+      removeProductCategory: async category => {
+        if (category === 'Other') {
+          return { error: 'The starter category cannot be removed.', success: false };
+        }
+        if (
+          state.products.some(product => (product.category ?? 'Other') === category)
+        ) {
+          return {
+            error: 'This category is still in use by existing products.',
+            success: false,
+          };
+        }
+
+        const nextCategories = state.settings.productCategories.filter(
+          currentCategory => currentCategory !== category,
+        );
+
+        try {
+          await saveProductCategories(nextCategories);
+          dispatch({ type: 'REMOVE_PRODUCT_CATEGORY', payload: category });
+          return { success: true };
+        } catch {
+          return { error: 'Unable to remove category locally.', success: false };
         }
       },
       todaysExpensesTotal: todaysExpenses.reduce(

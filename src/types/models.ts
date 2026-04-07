@@ -1,12 +1,5 @@
 export type EntityId = string;
 
-export type ProductCategory =
-  | 'Baby (0-24M)'
-  | 'Toddler (2-5Y)'
-  | 'Kids (6-12Y)'
-  | 'Shoes'
-  | 'Accessories';
-
 export type ProductGender = 'Boy' | 'Girl' | 'Unisex';
 
 export type ProductAttributes = {
@@ -22,10 +15,14 @@ type WithRequiredId = {
   id: EntityId;
 };
 
+export type AppSettings = {
+  productCategories: string[];
+};
+
 export type Product = WithRequiredId & {
   name?: string;
   sku?: string;
-  category?: ProductCategory;
+  category?: string;
   subCategory?: string;
   attributes?: ProductAttributes;
   costPrice?: number;
@@ -41,7 +38,7 @@ export type SaleTransaction = WithRequiredId & {
   productId?: EntityId;
   productName?: string;
   productSku?: string;
-  category?: ProductCategory;
+  category?: string;
   productAttributesSnapshot?: ProductAttributes;
   quantitySold?: number;
   unitCostPrice?: number;
