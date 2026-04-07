@@ -21,8 +21,8 @@ type SQLiteDatabase = {
   executeSql: (
     sql: string,
     params?: unknown[],
-    success?: (_tx: unknown, result: SQLiteResultSet) => void,
-    error?: (_tx: unknown, err: unknown) => boolean,
+    success?: (result: SQLiteResultSet) => void,
+    error?: (err: unknown) => void,
   ) => void;
   transaction: (
     fn: (tx: SQLiteTransaction) => void,
@@ -88,10 +88,9 @@ async function executeSql(sql: string, params: unknown[] = []) {
     db.executeSql(
       sql,
       params,
-      (_tx, result) => resolve(result),
-      (_tx, error) => {
+      result => resolve(result),
+      error => {
         reject(error);
-        return false;
       },
     );
   });
