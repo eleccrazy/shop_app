@@ -108,7 +108,7 @@ const initialState: AppState = {
   products: [],
   sales: [],
   settings: {
-    productCategories: ['Other'],
+    productCategories: [],
   },
 };
 

@@ -1,11 +1,5 @@
 import SQLite from 'react-native-sqlite-storage';
 
-import {
-  activityFeed as seedActivityFeed,
-  expenses as seedExpenses,
-  products as seedProducts,
-  sales as seedSales,
-} from '../data/mockData';
 import type {
   ActivityEntry,
   AppSettings,
@@ -56,8 +50,6 @@ type SQLiteTransaction = {
 };
 
 const DB_NAME = 'shopapp.db';
-const DEFAULT_PRODUCT_CATEGORIES = ['Other'];
-
 let databaseInstance: SQLiteDatabase | null = null;
 
 function getRowArray<T>(result: SQLiteResultSet) {
@@ -273,86 +265,13 @@ export async function initializeDatabase() {
   if (settingsCount === 0) {
     await executeSql(
       'INSERT INTO app_settings (key, value_json) VALUES (?, ?)',
-      ['productCategories', JSON.stringify(DEFAULT_PRODUCT_CATEGORIES)],
+      ['productCategories', JSON.stringify([])],
     );
   }
 
   if (count > 0) {
     return;
   }
-
-  await runTransaction(tx => {
-    seedProducts.forEach(product => {
-      tx.executeSql(
-        `INSERT INTO products (
-          id, name, sku, category, sub_category, attributes_json,
-          cost_price, selling_price, current_stock, low_stock_threshold,
-          is_active, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        serializeProduct(product),
-      );
-    });
-
-    seedSales.forEach(sale => {
-      tx.executeSql(
-        `INSERT INTO sales (
-          id, product_id, product_name, product_sku, category,
-          product_attributes_snapshot_json, quantity_sold, unit_cost_price,
-          unit_selling_price, actual_sold_price, total_revenue, total_profit,
-          sold_at, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          sale.id,
-          sale.productId ?? '',
-          sale.productName ?? '',
-          sale.productSku ?? null,
-          sale.category ?? null,
-          JSON.stringify(sale.productAttributesSnapshot ?? {}),
-          sale.quantitySold ?? 0,
-          sale.unitCostPrice ?? 0,
-          sale.unitSellingPrice ?? 0,
-          sale.actualSoldPrice ?? sale.unitSellingPrice ?? 0,
-          sale.totalRevenue ?? 0,
-          sale.totalProfit ?? 0,
-          sale.soldAt ?? Date.now(),
-          sale.notes ?? null,
-        ],
-      );
-    });
-
-    seedExpenses.forEach(expense => {
-      tx.executeSql(
-        `INSERT INTO expenses (
-          id, title, category, amount, expense_date, recorded_at, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          expense.id,
-          expense.title ?? '',
-          expense.category ?? null,
-          expense.amount ?? 0,
-          expense.expenseDate ?? Date.now(),
-          expense.recordedAt ?? Date.now(),
-          expense.notes ?? null,
-        ],
-      );
-    });
-
-    seedActivityFeed.forEach((entry, index) => {
-      tx.executeSql(
-        `INSERT INTO activity_logs (
-          id, type, title, amount, timestamp_text, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          entry.id,
-          entry.type ?? 'sale',
-          entry.title ?? '',
-          entry.amount ?? 0,
-          entry.timestamp ?? '',
-          Date.now() - index,
-        ],
-      );
-    });
-  });
 }
 
 export async function loadDatabaseState(): Promise<DatabaseShape> {
@@ -377,7 +296,7 @@ export async function loadDatabaseState(): Promise<DatabaseShape> {
     settings: {
       productCategories: settingsRow?.value_json
         ? JSON.parse(String(settingsRow.value_json))
-        : DEFAULT_PRODUCT_CATEGORIES,
+        : [],
     },
   };
 }
