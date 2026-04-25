@@ -82,12 +82,25 @@ export function SellScreen() {
 
   return (
     <Screen
+      leadingAction={
+        isCreating
+          ? {
+              accessibilityLabel: 'Go back',
+              icon: '‹',
+              onPress: () => setIsCreating(false),
+            }
+          : undefined
+      }
       title={copy.sell.title}
       subtitle={isCreating ? copy.sell.addFormSubtitle : copy.sell.subtitle}
-      headerAction={{
-        label: isCreating ? copy.sell.cancelAction : copy.sell.addAction,
-        onPress: () => setIsCreating(current => !current),
-      }}
+      headerAction={
+        isCreating
+          ? undefined
+          : {
+              label: copy.sell.addAction,
+              onPress: () => setIsCreating(true),
+            }
+      }
       footer={
         isCreating ? (
           <PrimaryButton label={copy.sell.confirmButton} onPress={handleConfirmSale} />
@@ -95,64 +108,64 @@ export function SellScreen() {
       }>
       {isCreating ? (
         <>
-      <SectionCard title={copy.sell.selectProduct}>
-        <TextInput
-          onChangeText={setSearchText}
-          placeholder={copy.sell.searchPlaceholder}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          value={searchText}
-        />
-        <Text style={styles.helperText}>{copy.sell.helper}</Text>
-        {filteredProducts.length > 0 ? (
-          filteredProducts.slice(0, 4).map(product => {
-            const active = product.id === selectedProduct?.id;
+          <SectionCard title={copy.sell.selectProduct}>
+            <TextInput
+              onChangeText={setSearchText}
+              placeholder={copy.sell.searchPlaceholder}
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              value={searchText}
+            />
+            <Text style={styles.helperText}>{copy.sell.helper}</Text>
+            {filteredProducts.length > 0 ? (
+              filteredProducts.slice(0, 4).map(product => {
+                const active = product.id === selectedProduct?.id;
 
-            return (
-              <Pressable
-                key={product.id}
-                onPress={() => {
-                  setSelectedProductId(product.id);
-                  setSearchText(product.name ?? '');
-                  setSoldPriceText(String(product.sellingPrice ?? ''));
-                  setFeedback(null);
-                }}
-                style={[styles.selectionCard, active && styles.activeSelectionCard]}>
-                <Text style={styles.selectionTitle}>{product.name}</Text>
-                <Text style={styles.selectionMeta}>
-                  {copy.sell.sellingAt} {formatCurrency(product.sellingPrice ?? 0)} ·{' '}
-                  {product.currentStock ?? 0} {copy.sell.inStock}
-                </Text>
-              </Pressable>
-            );
-          })
-        ) : (
-          <Text style={styles.helperText}>{copy.sell.emptyState}</Text>
-        )}
-      </SectionCard>
+                return (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => {
+                      setSelectedProductId(product.id);
+                      setSearchText(product.name ?? '');
+                      setSoldPriceText(String(product.sellingPrice ?? ''));
+                      setFeedback(null);
+                    }}
+                    style={[styles.selectionCard, active && styles.activeSelectionCard]}>
+                    <Text style={styles.selectionTitle}>{product.name}</Text>
+                    <Text style={styles.selectionMeta}>
+                      {copy.sell.sellingAt} {formatCurrency(product.sellingPrice ?? 0)} ·{' '}
+                      {product.currentStock ?? 0} {copy.sell.inStock}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            ) : (
+              <Text style={styles.helperText}>{copy.sell.emptyState}</Text>
+            )}
+          </SectionCard>
 
-      <SectionCard title={copy.sell.saleDetails}>
-        <Text style={styles.fieldLabel}>{copy.sell.quantitySold}</Text>
-        <TextInput
-          keyboardType="number-pad"
-          onChangeText={setQuantityText}
-          style={styles.input}
-          value={quantityText}
-        />
-        <Text style={styles.fieldLabel}>{copy.sell.actualSoldPrice}</Text>
-        <TextInput
-          keyboardType="decimal-pad"
-          onChangeText={setSoldPriceText}
-          style={styles.input}
-          value={soldPriceText}
-        />
-        <DateField date={soldAt} label={copy.sell.soldDate} onChange={setSoldAt} />
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>{copy.sell.expectedTotal}</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(expectedTotal)}</Text>
-        </View>
-      </SectionCard>
-      </>
+          <SectionCard title={copy.sell.saleDetails}>
+            <Text style={styles.fieldLabel}>{copy.sell.quantitySold}</Text>
+            <TextInput
+              keyboardType="number-pad"
+              onChangeText={setQuantityText}
+              style={styles.input}
+              value={quantityText}
+            />
+            <Text style={styles.fieldLabel}>{copy.sell.actualSoldPrice}</Text>
+            <TextInput
+              keyboardType="decimal-pad"
+              onChangeText={setSoldPriceText}
+              style={styles.input}
+              value={soldPriceText}
+            />
+            <DateField date={soldAt} label={copy.sell.soldDate} onChange={setSoldAt} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>{copy.sell.expectedTotal}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(expectedTotal)}</Text>
+            </View>
+          </SectionCard>
+        </>
       ) : (
         <SectionCard title={copy.sell.recentTitle}>
           {sales.length > 0 ? (

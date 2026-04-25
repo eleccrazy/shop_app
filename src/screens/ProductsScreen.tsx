@@ -179,6 +179,15 @@ export function ProductsScreen() {
     <Screen
       contentContainerStyle={!isCreating ? styles.listContent : undefined}
       scrollable={isCreating}
+      leadingAction={
+        isCreating
+          ? {
+              accessibilityLabel: 'Go back',
+              icon: '‹',
+              onPress: closeCreateForm,
+            }
+          : undefined
+      }
       title={copy.products.title}
       subtitle={
         isCreating
@@ -187,10 +196,14 @@ export function ProductsScreen() {
             : copy.products.formSubtitle
           : copy.products.subtitle
       }
-      headerAction={{
-        label: isCreating ? copy.products.cancelAction : copy.products.addAction,
-        onPress: isCreating ? closeCreateForm : openCreateForm,
-      }}
+      headerAction={
+        isCreating
+          ? undefined
+          : {
+              label: copy.products.addAction,
+              onPress: openCreateForm,
+            }
+      }
       footer={
         isCreating ? (
           <PrimaryButton

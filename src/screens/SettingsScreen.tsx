@@ -68,7 +68,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     <Screen
       leadingAction={{
         accessibilityLabel: 'Go back',
-        icon: '←',
+        icon: '‹',
         onPress: onBack,
       }}
       title={copy.settings.title}

@@ -49,6 +49,7 @@ export function Screen({
         {leadingAction ? (
           <Pressable
             accessibilityLabel={leadingAction.accessibilityLabel}
+            hitSlop={10}
             onPress={leadingAction.onPress}
             style={styles.leadingAction}>
             <Text style={styles.leadingActionIcon}>{leadingAction.icon}</Text>
@@ -130,17 +131,17 @@ const styles = StyleSheet.create({
   leadingAction: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    height: 32,
+    height: 48,
     justifyContent: 'center',
     marginBottom: spacing.sm,
-    marginLeft: -4,
-    width: 32,
+    marginLeft: -8,
+    width: 48,
   },
   leadingActionIcon: {
     color: colors.text,
-    fontSize: 28,
-    fontWeight: '400',
-    lineHeight: 28,
+    fontSize: 32,
+    fontWeight: '700',
+    lineHeight: 32,
   },
   headerTopRow: {
     alignItems: 'flex-start',

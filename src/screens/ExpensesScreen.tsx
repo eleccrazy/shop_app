@@ -67,12 +67,25 @@ export function ExpensesScreen() {
 
   return (
     <Screen
+      leadingAction={
+        isCreating
+          ? {
+              accessibilityLabel: 'Go back',
+              icon: '‹',
+              onPress: () => setIsCreating(false),
+            }
+          : undefined
+      }
       title={copy.expenses.title}
       subtitle={isCreating ? copy.expenses.addFormSubtitle : copy.expenses.subtitle}
-      headerAction={{
-        label: isCreating ? copy.expenses.cancelAction : copy.expenses.addAction,
-        onPress: () => setIsCreating(current => !current),
-      }}
+      headerAction={
+        isCreating
+          ? undefined
+          : {
+              label: copy.expenses.addAction,
+              onPress: () => setIsCreating(true),
+            }
+      }
       footer={
         isCreating ? (
           <PrimaryButton label={copy.expenses.saveButton} onPress={handleSaveExpense} />
@@ -80,41 +93,41 @@ export function ExpensesScreen() {
       }>
       {isCreating ? (
         <SectionCard title={copy.expenses.addTitle}>
-        <TextInput
-          onChangeText={setTitle}
-          placeholder={copy.expenses.whatDidYouBuy}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          value={title}
-        />
-        <TextInput
-          keyboardType="decimal-pad"
-          onChangeText={setAmount}
-          placeholder={copy.expenses.howMuch}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          value={amount}
-        />
-        <DateField
-          date={expenseDate}
-          label={copy.expenses.expenseDate}
-          onChange={setExpenseDate}
-        />
-      </SectionCard>
+          <TextInput
+            onChangeText={setTitle}
+            placeholder={copy.expenses.whatDidYouBuy}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            value={title}
+          />
+          <TextInput
+            keyboardType="decimal-pad"
+            onChangeText={setAmount}
+            placeholder={copy.expenses.howMuch}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            value={amount}
+          />
+          <DateField
+            date={expenseDate}
+            label={copy.expenses.expenseDate}
+            onChange={setExpenseDate}
+          />
+        </SectionCard>
       ) : (
-      <SectionCard title={copy.expenses.recentTitle}>
-        {expenses.map(expense => (
-          <View key={expense.id} style={styles.row}>
-            <View>
-              <Text style={styles.title}>{expense.title}</Text>
-              <Text style={styles.meta}>
-                {formatRelativeExpenseTime(expense.expenseDate ?? Date.now())}
-              </Text>
+        <SectionCard title={copy.expenses.recentTitle}>
+          {expenses.map(expense => (
+            <View key={expense.id} style={styles.row}>
+              <View>
+                <Text style={styles.title}>{expense.title}</Text>
+                <Text style={styles.meta}>
+                  {formatRelativeExpenseTime(expense.expenseDate ?? Date.now())}
+                </Text>
+              </View>
+              <Text style={styles.amount}>-{formatCurrency(expense.amount ?? 0)}</Text>
             </View>
-            <Text style={styles.amount}>-{formatCurrency(expense.amount ?? 0)}</Text>
-          </View>
-        ))}
-      </SectionCard>
+          ))}
+        </SectionCard>
       )}
       <FeedbackPopup
         message={feedback?.message ?? ''}

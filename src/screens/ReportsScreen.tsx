@@ -19,7 +19,7 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
     <Screen
       leadingAction={{
         accessibilityLabel: 'Go back',
-        icon: '←',
+        icon: '‹',
         onPress: onBack,
       }}
       title={copy.reports.title}
