@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { FeedbackPopup } from '../components/FeedbackPopup';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -11,6 +11,8 @@ import { useAppStore } from '../store/AppStore';
 import { colors, spacing } from '../theme';
 import { formatCurrency } from '../utils/currency';
 import { radius } from '../theme';
+
+const PRODUCTS_PAGE_SIZE = 20;
 
 export function ProductsScreen() {
   const { addProduct, products, settings, updateProduct } = useAppStore();
@@ -26,6 +28,7 @@ export function ProductsScreen() {
   const [name, setName] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [sellingPrice, setSellingPrice] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PAGE_SIZE);
 
   const categoryOptions = useMemo(() => {
     const options = ['All', ...settings.productCategories];
@@ -44,8 +47,17 @@ export function ProductsScreen() {
 
     return products.filter(product => product.category === selectedFilter);
   }, [products, selectedFilter]);
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount],
+  );
+  const hasMoreProducts = visibleCount < filteredProducts.length;
 
   const isEditing = editingProductId !== null;
+
+  useEffect(() => {
+    setVisibleCount(PRODUCTS_PAGE_SIZE);
+  }, [selectedFilter, products.length]);
 
   const resetForm = () => {
     setCategory('Other');
@@ -118,6 +130,10 @@ export function ProductsScreen() {
     resetForm();
   };
 
+  const loadMoreProducts = () => {
+    setVisibleCount(currentCount => currentCount + PRODUCTS_PAGE_SIZE);
+  };
+
   const openEditForm = (productId: string) => {
     const product = products.find(item => item.id === productId);
 
@@ -136,6 +152,8 @@ export function ProductsScreen() {
 
   return (
     <Screen
+      contentContainerStyle={!isCreating ? styles.listContent : undefined}
+      scrollable={isCreating}
       title={copy.products.title}
       subtitle={
         isCreating
@@ -201,61 +219,77 @@ export function ProductsScreen() {
           />
         </SectionCard>
       ) : (
-        <>
-          <SelectField
-            label={copy.products.filterLabel}
-            onSelect={setSelectedFilter}
-            options={categoryOptions.map(option =>
-              option === 'All' ? copy.products.allCategories : option,
-            )}
-            value={
-              selectedFilter === 'All'
-                ? copy.products.allCategories
-                : selectedFilter
-            }
-          />
-
-          {filteredProducts.length === 0 ? (
+        <FlatList
+          contentContainerStyle={styles.listContainer}
+          data={visibleProducts}
+          keyExtractor={item => item.id}
+          ListEmptyComponent={
             <Text style={styles.emptyText}>{copy.products.emptyState}</Text>
-          ) : null}
-        </>
+          }
+          ListFooterComponent={
+            hasMoreProducts ? (
+              <PrimaryButton
+                label={`Load ${Math.min(PRODUCTS_PAGE_SIZE, filteredProducts.length - visibleCount)} more`}
+                onPress={loadMoreProducts}
+                variant="ghost"
+              />
+            ) : filteredProducts.length > PRODUCTS_PAGE_SIZE ? (
+              <Text style={styles.resultsHint}>
+                Showing all {filteredProducts.length} products
+              </Text>
+            ) : null
+          }
+          ListHeaderComponent={
+            <SelectField
+              label={copy.products.filterLabel}
+              onSelect={setSelectedFilter}
+              options={categoryOptions.map(option =>
+                option === 'All' ? copy.products.allCategories : option,
+              )}
+              value={
+                selectedFilter === 'All'
+                  ? copy.products.allCategories
+                  : selectedFilter
+              }
+            />
+          }
+          renderItem={({ item: product }) => (
+            <Pressable onPress={() => openEditForm(product.id)}>
+              <SectionCard>
+                <View style={styles.row}>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.name}>{product.name}</Text>
+                    <Text style={styles.meta}>
+                      {product.category} · {copy.products.buyLabel}{' '}
+                      {formatCurrency(product.costPrice ?? 0)} · {copy.products.sellLabel}{' '}
+                      {formatCurrency(product.sellingPrice ?? 0)}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.stockPill,
+                      (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0)
+                        ? styles.lowPill
+                        : styles.normalPill,
+                    ]}>
+                    <Text
+                      style={[
+                        styles.stockPillText,
+                        (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0)
+                          ? styles.lowPillText
+                          : styles.normalPillText,
+                      ]}>
+                      {product.currentStock ?? 0} {copy.products.quantityUnit}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.tapHint}>Tap to update this product</Text>
+              </SectionCard>
+            </Pressable>
+          )}
+          showsVerticalScrollIndicator={false}
+        />
       )}
-
-      {!isCreating &&
-        filteredProducts.map(product => (
-        <Pressable key={product.id} onPress={() => openEditForm(product.id)}>
-          <SectionCard>
-            <View style={styles.row}>
-              <View style={styles.productInfo}>
-                <Text style={styles.name}>{product.name}</Text>
-                <Text style={styles.meta}>
-                  {product.category} · {copy.products.buyLabel}{' '}
-                  {formatCurrency(product.costPrice ?? 0)} · {copy.products.sellLabel}{' '}
-                  {formatCurrency(product.sellingPrice ?? 0)}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.stockPill,
-                  (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0)
-                    ? styles.lowPill
-                    : styles.normalPill,
-                ]}>
-                <Text
-                  style={[
-                    styles.stockPillText,
-                    (product.currentStock ?? 0) <= (product.lowStockThreshold ?? 0)
-                      ? styles.lowPillText
-                      : styles.normalPillText,
-                  ]}>
-                  {product.currentStock ?? 0} {copy.products.quantityUnit}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.tapHint}>Tap to update this product</Text>
-          </SectionCard>
-        </Pressable>
-      ))}
       <FeedbackPopup
         message={feedback?.message ?? ''}
         onClose={() => setFeedback(null)}
@@ -267,6 +301,13 @@ export function ProductsScreen() {
 }
 
 const styles = StyleSheet.create({
+  listContent: {
+    flex: 1,
+  },
+  listContainer: {
+    gap: spacing.lg,
+    paddingBottom: spacing.xxxl,
+  },
   input: {
     backgroundColor: colors.background,
     borderColor: colors.border,
@@ -285,6 +326,11 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,
+  },
+  resultsHint: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
   },
   helperText: {
     color: colors.textMuted,
