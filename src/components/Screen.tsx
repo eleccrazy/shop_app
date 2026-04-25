@@ -18,6 +18,11 @@ type ScreenProps = PropsWithChildren<{
   scrollable?: boolean;
   footer?: React.ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  leadingAction?: {
+    accessibilityLabel?: string;
+    icon: string;
+    onPress?: () => void;
+  };
   headerAction?: {
     label: string;
     onPress?: () => void;
@@ -31,6 +36,7 @@ export function Screen({
   scrollable = true,
   footer,
   contentContainerStyle,
+  leadingAction,
   headerAction,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
@@ -38,6 +44,14 @@ export function Screen({
   const content = (
     <View style={[styles.content, contentContainerStyle]}>
       <View style={styles.header}>
+        {leadingAction ? (
+          <Pressable
+            accessibilityLabel={leadingAction.accessibilityLabel}
+            onPress={leadingAction.onPress}
+            style={styles.leadingAction}>
+            <Text style={styles.leadingActionIcon}>{leadingAction.icon}</Text>
+          </Pressable>
+        ) : null}
         <View style={styles.headerTopRow}>
           <Text style={styles.title}>{title}</Text>
           {headerAction ? (
@@ -97,6 +111,21 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: spacing.xs,
+  },
+  leadingAction: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    height: 32,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    marginLeft: -4,
+    width: 32,
+  },
+  leadingActionIcon: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '400',
+    lineHeight: 28,
   },
   headerTopRow: {
     alignItems: 'flex-start',

@@ -66,15 +66,13 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
 
   return (
     <Screen
+      leadingAction={{
+        accessibilityLabel: 'Go back',
+        icon: '←',
+        onPress: onBack,
+      }}
       title={copy.settings.title}
-      subtitle={copy.settings.subtitle}
-      footer={
-        <PrimaryButton
-          label={copy.settings.backButton}
-          onPress={onBack}
-          variant="ghost"
-        />
-      }>
+      subtitle={copy.settings.subtitle}>
       <SectionCard title={copy.settings.categoriesTitle}>
         <TextInput
           onChangeText={setCategoryName}

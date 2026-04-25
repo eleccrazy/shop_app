@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { PrimaryButton } from '../components/PrimaryButton';
 import { Screen } from '../components/Screen';
 import { SectionCard } from '../components/SectionCard';
 import { copy } from '../content/copy';
@@ -18,15 +17,13 @@ export function ReportsScreen({ onBack }: ReportsScreenProps) {
 
   return (
     <Screen
+      leadingAction={{
+        accessibilityLabel: 'Go back',
+        icon: '←',
+        onPress: onBack,
+      }}
       title={copy.reports.title}
-      subtitle={copy.reports.subtitle}
-      footer={
-        <PrimaryButton
-          label={copy.reports.backButton}
-          onPress={onBack}
-          variant="ghost"
-        />
-      }>
+      subtitle={copy.reports.subtitle}>
       <SectionCard title={copy.reports.historyTitle}>
         {activityFeed.length > 0 ? (
           activityFeed.map(entry => (
