@@ -202,29 +202,18 @@ export function ProductsScreen() {
         </SectionCard>
       ) : (
         <>
-          <View style={styles.filterHeader}>
-            <Text style={styles.filterLabel}>{copy.products.filterLabel}</Text>
-          </View>
-          <View style={styles.filterRow}>
-            {categoryOptions.map(option => {
-              const active = option === selectedFilter;
-
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() => setSelectedFilter(option)}
-                  style={[styles.filterChip, active && styles.activeFilterChip]}>
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      active && styles.activeFilterChipText,
-                    ]}>
-                    {option === 'All' ? copy.products.allCategories : option}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <SelectField
+            label={copy.products.filterLabel}
+            onSelect={setSelectedFilter}
+            options={categoryOptions.map(option =>
+              option === 'All' ? copy.products.allCategories : option,
+            )}
+            value={
+              selectedFilter === 'All'
+                ? copy.products.allCategories
+                : selectedFilter
+            }
+          />
 
           {filteredProducts.length === 0 ? (
             <Text style={styles.emptyText}>{copy.products.emptyState}</Text>
@@ -296,39 +285,6 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,
-  },
-  filterHeader: {
-    marginBottom: spacing.xs,
-  },
-  filterLabel: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  filterChip: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  activeFilterChip: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterChipText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  activeFilterChipText: {
-    color: colors.surface,
   },
   helperText: {
     color: colors.textMuted,
