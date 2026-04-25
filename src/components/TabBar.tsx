@@ -34,7 +34,11 @@ export function TabBar({ activeTab, onTabPress }: TabBarProps) {
           <Pressable
             key={tab.key}
             onPress={() => onTabPress(tab.key)}
-            style={[styles.tab, active && styles.activeTab]}>
+            style={({ pressed }) => [
+              styles.tab,
+              active && styles.activeTab,
+              pressed && styles.pressedTab,
+            ]}>
             <Text style={[styles.icon, active && styles.activeText]}>{tab.icon}</Text>
             <Text style={[styles.label, active && styles.activeText]}>{tab.label}</Text>
           </Pressable>
@@ -63,6 +67,10 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: colors.surfaceMuted,
+  },
+  pressedTab: {
+    opacity: 0.92,
+    transform: [{ scale: 0.97 }],
   },
   icon: {
     color: colors.tabInactive,

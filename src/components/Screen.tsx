@@ -1,4 +1,5 @@
-import React, { PropsWithChildren } from 'react';
+import React, { PropsWithChildren, useEffect, useRef } from 'react';
+import { Animated, Easing } from 'react-native';
 import {
   Pressable,
   ScrollView,
@@ -42,10 +43,54 @@ export function Screen({
   headerAction,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslate = useRef(new Animated.Value(16)).current;
+  const bodyOpacity = useRef(new Animated.Value(0)).current;
+  const bodyTranslate = useRef(new Animated.Value(22)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(headerOpacity, {
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(headerTranslate, {
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(bodyOpacity, {
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bodyTranslate, {
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [bodyOpacity, bodyTranslate, headerOpacity, headerTranslate]);
 
   const content = (
     <View style={[styles.content, contentContainerStyle]}>
-      <View style={styles.header}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslate }],
+          },
+        ]}>
         {leadingAction ? (
           <Pressable
             accessibilityLabel={leadingAction.accessibilityLabel}
@@ -77,8 +122,17 @@ export function Screen({
           ) : null}
         </View>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      </View>
-      {children}
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.body,
+          {
+            opacity: bodyOpacity,
+            transform: [{ translateY: bodyTranslate }],
+          },
+        ]}>
+        {children}
+      </Animated.View>
     </View>
   );
 
@@ -123,6 +177,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   content: {
+    gap: spacing.lg,
+  },
+  body: {
     gap: spacing.lg,
   },
   header: {

@@ -1,5 +1,5 @@
-import React, { PropsWithChildren } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { PropsWithChildren, useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing } from '../theme';
 
@@ -13,8 +13,42 @@ export function SectionCard({
   title,
   actionLabel,
 }: SectionCardProps) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(18)).current;
+  const scale = useRef(new Animated.Value(0.985)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, scale, translateY]);
+
   return (
-    <View style={styles.card}>
+    <Animated.View
+      style={[
+        styles.card,
+        {
+          opacity,
+          transform: [{ translateY }, { scale }],
+        },
+      ]}>
       {title ? (
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>
@@ -22,7 +56,7 @@ export function SectionCard({
         </View>
       ) : null}
       {children}
-    </View>
+    </Animated.View>
   );
 }
 

@@ -400,7 +400,9 @@ function MetricCard({
           <Text style={styles.metricLabel}>{label}</Text>
           <Text style={styles.metricIcon}>{icon}</Text>
         </View>
-        <Text style={styles.metricValue}>{value}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={styles.metricValue}>
+          {value}
+        </Text>
         <Text style={styles.metricSummary}>{summary}</Text>
       </View>
     </Pressable>
@@ -490,6 +492,7 @@ const styles = StyleSheet.create({
   },
   metricPressable: {
     flex: 1,
+    minWidth: 0,
   },
   metricPressed: {
     opacity: 0.95,
@@ -497,8 +500,10 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     borderRadius: radius.lg,
-    minHeight: 154,
+    height: 156,
+    justifyContent: 'space-between',
     padding: spacing.lg,
+    width: '100%',
   },
   metricCardActive: {
     borderColor: colors.text,
@@ -527,13 +532,13 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.7,
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
+    minWidth: 0,
   },
   metricSummary: {
     color: colors.textMuted,
     fontSize: 13,
     fontWeight: '700',
-    marginTop: spacing.sm,
   },
   promptLabel: {
     color: colors.text,
