@@ -74,7 +74,7 @@ function openDatabase() {
         databaseInstance = db as SQLiteDatabase;
         resolve(databaseInstance);
       },
-      error => {
+      (error: unknown) => {
         reject(error);
       },
     );

@@ -41,13 +41,17 @@ const styles = StyleSheet.create({
   },
   solidButton: {
     backgroundColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.primaryDark,
   },
   ghostButton: {
     backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   pressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
+    opacity: 0.96,
+    transform: [{ scale: 0.985 }],
   },
   label: {
     fontSize: 15,

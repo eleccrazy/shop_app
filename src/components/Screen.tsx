@@ -128,9 +128,17 @@ const styles = StyleSheet.create({
   },
   footer: {
     backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    shadowColor: '#6B4A2D',
+    shadowOffset: {
+      width: 0,
+      height: -8,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 6,
   },
 });
