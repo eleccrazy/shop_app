@@ -57,6 +57,7 @@ export function DashboardScreen({
   onOpenSettings,
 }: DashboardScreenProps) {
   const {
+    activityFeed,
     lowStockProducts,
     todaysExpensesTotal,
     todaysProfitTotal,
@@ -178,9 +179,15 @@ export function DashboardScreen({
     lowStockProducts.length > 0
       ? `${lowStockProducts.length} product${lowStockProducts.length === 1 ? '' : 's'} need attention soon.`
       : 'Everything currently in stock is sitting above its low-stock threshold.';
+  const recentReportItems = activityFeed.slice(0, 2);
 
   return (
     <Screen
+      headerAction={{
+        accessibilityLabel: 'Open settings',
+        icon: '✦',
+        onPress: onOpenSettings,
+      }}
       title={copy.dashboard.title}
       subtitle={copy.dashboard.subtitle}>
       <Animated.View
@@ -210,14 +217,6 @@ export function DashboardScreen({
         </View>
         <Text style={styles.heroTitle}>Run the shop from one glance, then drill in.</Text>
         <Text style={styles.heroText}>{heroMessage}</Text>
-        <View style={styles.heroActionRow}>
-          <PrimaryButton label={copy.dashboard.openReports} onPress={onOpenReports} />
-          <PrimaryButton
-            label={copy.dashboard.openSettings}
-            onPress={onOpenSettings}
-            variant="ghost"
-          />
-        </View>
       </Animated.View>
 
       <Animated.View
@@ -258,10 +257,13 @@ export function DashboardScreen({
       </Animated.View>
 
       <Animated.View
-        style={{
-          opacity: detailFade,
-          transform: [{ translateY: detailLift }],
-        }}>
+        style={[
+          styles.detailStack,
+          {
+            opacity: detailFade,
+            transform: [{ translateY: detailLift }],
+          },
+        ]}>
         <SectionCard>
           <View style={styles.insightHeader}>
             <View>
@@ -288,6 +290,50 @@ export function DashboardScreen({
             <Text style={styles.calloutText}>{activeInsightDetails.callout}</Text>
           </View>
         </SectionCard>
+
+        <View style={styles.reportsCard}>
+          <View style={styles.reportsHeader}>
+            <View>
+              <Text style={styles.reportsEyebrow}>Reports Preview</Text>
+              <Text style={styles.reportsTitle}>Recent activity worth checking</Text>
+            </View>
+            <View style={styles.reportsIconWrap}>
+              <Text style={styles.reportsIcon}>▤</Text>
+            </View>
+          </View>
+
+          {recentReportItems.length > 0 ? (
+            recentReportItems.map(entry => (
+              <View key={entry.id} style={styles.reportRow}>
+                <View style={styles.reportTextWrap}>
+                  <Text style={styles.reportTitleText}>{entry.title}</Text>
+                  <Text style={styles.reportMetaText}>{entry.timestamp}</Text>
+                </View>
+                <Text
+                  style={[
+                    styles.reportAmountText,
+                    entry.type === 'sale'
+                      ? styles.reportAmountPositive
+                      : styles.reportAmountNegative,
+                  ]}>
+                  {entry.type === 'sale' ? '+' : '-'}
+                  {formatCurrency(entry.amount ?? 0)}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.reportEmptyState}>
+              <Text style={styles.reportEmptyTitle}>No report activity yet.</Text>
+              <Text style={styles.promptText}>
+                Sales and expenses will start appearing here as soon as you log them.
+              </Text>
+            </View>
+          )}
+
+          <Pressable onPress={onOpenReports} style={styles.seeMoreButton}>
+            <Text style={styles.seeMoreButtonText}>See more</Text>
+          </Pressable>
+        </View>
       </Animated.View>
 
       <SectionCard
@@ -435,13 +481,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     maxWidth: '82%',
   },
-  heroActionRow: {
-    gap: spacing.md,
-    marginTop: spacing.xl,
-  },
   statGrid: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  detailStack: {
+    gap: spacing.lg,
   },
   metricPressable: {
     flex: 1,
@@ -547,6 +592,107 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     lineHeight: 21,
+  },
+  reportsCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  reportsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  reportsEyebrow: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  reportsTitle: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginTop: spacing.xs,
+  },
+  reportsIconWrap: {
+    alignItems: 'center',
+    backgroundColor: colors.salesCard,
+    borderRadius: radius.pill,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  reportsIcon: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  reportRow: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  reportTextWrap: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  reportTitleText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  reportMetaText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: spacing.xs,
+  },
+  reportAmountText: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  reportAmountPositive: {
+    color: colors.success,
+  },
+  reportAmountNegative: {
+    color: colors.danger,
+  },
+  reportEmptyState: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+  },
+  reportEmptyTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: spacing.xs,
+  },
+  seeMoreButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: spacing.lg,
+  },
+  seeMoreButtonText: {
+    color: colors.surface,
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   stockRow: {
     alignItems: 'center',

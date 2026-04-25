@@ -26,6 +26,7 @@ export function ProductsScreen() {
   } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
+  const [searchText, setSearchText] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [sellingPrice, setSellingPrice] = useState('');
   const [visibleCount, setVisibleCount] = useState(PRODUCTS_PAGE_SIZE);
@@ -41,12 +42,36 @@ export function ProductsScreen() {
   }, [category, settings.productCategories]);
 
   const filteredProducts = useMemo(() => {
-    if (selectedFilter === 'All') {
-      return products;
-    }
+    const normalizedQuery = searchText.trim().toLowerCase();
 
-    return products.filter(product => product.category === selectedFilter);
-  }, [products, selectedFilter]);
+    return products.filter(product => {
+      const matchesCategory =
+        selectedFilter === 'All' || product.category === selectedFilter;
+
+      if (!matchesCategory) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const searchableText = [
+        product.name,
+        product.sku,
+        product.subCategory,
+        product.category,
+        product.attributes?.size,
+        product.attributes?.color,
+        product.attributes?.brand,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(normalizedQuery);
+    });
+  }, [products, searchText, selectedFilter]);
   const visibleProducts = useMemo(
     () => filteredProducts.slice(0, visibleCount),
     [filteredProducts, visibleCount],
@@ -57,7 +82,7 @@ export function ProductsScreen() {
 
   useEffect(() => {
     setVisibleCount(PRODUCTS_PAGE_SIZE);
-  }, [selectedFilter, products.length]);
+  }, [searchText, selectedFilter, products.length]);
 
   const resetForm = () => {
     setCategory('Other');
@@ -240,18 +265,27 @@ export function ProductsScreen() {
             ) : null
           }
           ListHeaderComponent={
-            <SelectField
-              label={copy.products.filterLabel}
-              onSelect={setSelectedFilter}
-              options={categoryOptions.map(option =>
-                option === 'All' ? copy.products.allCategories : option,
-              )}
-              value={
-                selectedFilter === 'All'
-                  ? copy.products.allCategories
-                  : selectedFilter
-              }
-            />
+            <SectionCard title="Find Products">
+              <SelectField
+                label={copy.products.filterLabel}
+                onSelect={setSelectedFilter}
+                options={categoryOptions.map(option =>
+                  option === 'All' ? copy.products.allCategories : option,
+                )}
+                value={
+                  selectedFilter === 'All'
+                    ? copy.products.allCategories
+                    : selectedFilter
+                }
+              />
+              <TextInput
+                onChangeText={setSearchText}
+                placeholder="Search by product name"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                value={searchText}
+              />
+            </SectionCard>
           }
           renderItem={({ item: product }) => (
             <Pressable onPress={() => openEditForm(product.id)}>
@@ -326,6 +360,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,
+    textAlign: 'center',
   },
   resultsHint: {
     color: colors.textMuted,

@@ -24,7 +24,9 @@ type ScreenProps = PropsWithChildren<{
     onPress?: () => void;
   };
   headerAction?: {
-    label: string;
+    accessibilityLabel?: string;
+    icon?: string;
+    label?: string;
     onPress?: () => void;
   };
 }>;
@@ -55,8 +57,21 @@ export function Screen({
         <View style={styles.headerTopRow}>
           <Text style={styles.title}>{title}</Text>
           {headerAction ? (
-            <Pressable onPress={headerAction.onPress} style={styles.headerAction}>
-              <Text style={styles.headerActionText}>{headerAction.label}</Text>
+            <Pressable
+              accessibilityLabel={headerAction.accessibilityLabel}
+              onPress={headerAction.onPress}
+              style={[
+                styles.headerAction,
+                headerAction.icon && !headerAction.label
+                  ? styles.headerIconAction
+                  : null,
+              ]}>
+              {headerAction.icon ? (
+                <Text style={styles.headerActionIcon}>{headerAction.icon}</Text>
+              ) : null}
+              {headerAction.label ? (
+                <Text style={styles.headerActionText}>{headerAction.label}</Text>
+              ) : null}
             </Pressable>
           ) : null}
         </View>
@@ -147,8 +162,34 @@ const styles = StyleSheet.create({
   headerAction: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: 999,
+    flexDirection: 'row',
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  headerIconAction: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.primaryDark,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    shadowColor: colors.primaryDark,
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    width: 40,
+    elevation: 3,
+  },
+  headerActionIcon: {
+    color: colors.primaryDark,
+    fontSize: 19,
+    fontWeight: '800',
   },
   headerActionText: {
     color: colors.text,
