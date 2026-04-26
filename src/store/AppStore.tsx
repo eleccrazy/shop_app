@@ -7,6 +7,7 @@ import {
   loadDatabaseState,
   renameProductCategory,
   saveProductCategories,
+  synchronizeDatabase,
   updateProductRecord,
 } from '../db/database';
 import type {
@@ -280,6 +281,25 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      synchronizeDatabase()
+        .then(() => loadDatabaseState())
+        .then(data => {
+          dispatch({ type: 'HYDRATE', payload: data });
+        })
+        .catch(() => undefined);
+    }, 30000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isHydrated]);
 
   const value = useMemo<AppStoreValue>(() => {
     const startOfToday = new Date();

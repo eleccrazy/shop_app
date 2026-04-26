@@ -4,46 +4,80 @@ import type {
   Product,
   SaleTransaction,
 } from '../types/models';
-import { firestoreDatabaseAdapter } from './firestoreDatabase';
-import { sqliteDatabaseAdapter } from './sqliteDatabase';
-import type { DatabaseAdapter } from './types';
+import {
+  applyFirestoreSyncOperation,
+  isFirestoreAvailable,
+  loadRemoteDatabaseState,
+} from './firestoreDatabase';
+import {
+  insertExpenseWithActivity as insertExpenseWithActivityLocally,
+  insertProduct as insertProductLocally,
+  insertSaleAndAdjustStock as insertSaleAndAdjustStockLocally,
+  loadLocalDatabaseState,
+  loadPendingSyncOperations,
+  mergeRemoteDatabaseState,
+  removePendingSyncOperation,
+  renameProductCategory as renameProductCategoryLocally,
+  saveProductCategories as saveProductCategoriesLocally,
+  updateProductRecord as updateProductRecordLocally,
+} from './sqliteDatabase';
 
-let resolvedAdapter: DatabaseAdapter | null = null;
+let synchronizationPromise: Promise<void> | null = null;
 
-async function getDatabaseAdapter() {
-  if (resolvedAdapter) {
-    return resolvedAdapter;
+async function runSynchronization() {
+  const firestoreReady = await isFirestoreAvailable();
+
+  if (!firestoreReady) {
+    return;
   }
 
-  const firestoreAvailable = await firestoreDatabaseAdapter.isAvailable();
-  resolvedAdapter = firestoreAvailable
-    ? firestoreDatabaseAdapter
-    : sqliteDatabaseAdapter;
+  const pendingOperations = await loadPendingSyncOperations();
+  for (const pendingOperation of pendingOperations) {
+    await applyFirestoreSyncOperation(pendingOperation.operation);
+    await removePendingSyncOperation(pendingOperation.id);
+  }
 
-  return resolvedAdapter;
+  const remoteState = await loadRemoteDatabaseState();
+  await mergeRemoteDatabaseState(remoteState);
+}
+
+export async function synchronizeDatabase() {
+  if (!synchronizationPromise) {
+    synchronizationPromise = runSynchronization().finally(() => {
+      synchronizationPromise = null;
+    });
+  }
+
+  return synchronizationPromise;
 }
 
 export async function loadDatabaseState() {
-  const adapter = await getDatabaseAdapter();
-  return adapter.loadDatabaseState();
+  const localState = await loadLocalDatabaseState();
+
+  try {
+    await synchronizeDatabase();
+    return await loadLocalDatabaseState();
+  } catch {
+    return localState;
+  }
 }
 
 export async function insertProduct(product: Product) {
-  const adapter = await getDatabaseAdapter();
-  return adapter.insertProduct(product);
+  await insertProductLocally(product);
+  void synchronizeDatabase();
 }
 
 export async function updateProductRecord(product: Product) {
-  const adapter = await getDatabaseAdapter();
-  return adapter.updateProductRecord(product);
+  await updateProductRecordLocally(product);
+  void synchronizeDatabase();
 }
 
 export async function insertExpenseWithActivity(
   expense: Expense,
   activity: ActivityEntry,
 ) {
-  const adapter = await getDatabaseAdapter();
-  return adapter.insertExpenseWithActivity(expense, activity);
+  await insertExpenseWithActivityLocally(expense, activity);
+  void synchronizeDatabase();
 }
 
 export async function insertSaleAndAdjustStock(
@@ -51,13 +85,13 @@ export async function insertSaleAndAdjustStock(
   activity: ActivityEntry,
   nextStock: number,
 ) {
-  const adapter = await getDatabaseAdapter();
-  return adapter.insertSaleAndAdjustStock(sale, activity, nextStock);
+  await insertSaleAndAdjustStockLocally(sale, activity, nextStock);
+  void synchronizeDatabase();
 }
 
 export async function saveProductCategories(productCategories: string[]) {
-  const adapter = await getDatabaseAdapter();
-  return adapter.saveProductCategories(productCategories);
+  await saveProductCategoriesLocally(productCategories);
+  void synchronizeDatabase();
 }
 
 export async function renameProductCategory(
@@ -65,6 +99,6 @@ export async function renameProductCategory(
   newCategory: string,
   nextCategories: string[],
 ) {
-  const adapter = await getDatabaseAdapter();
-  return adapter.renameProductCategory(oldCategory, newCategory, nextCategories);
+  await renameProductCategoryLocally(oldCategory, newCategory, nextCategories);
+  void synchronizeDatabase();
 }

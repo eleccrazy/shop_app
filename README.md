@@ -6,10 +6,11 @@ The project is currently focused on the MVP experience, with simple shop workflo
 
 ## Persistence
 
-The app now supports a Firestore-backed persistence adapter with SQLite fallback.
+The app now uses an offline-first persistence model.
 
-- If Firebase native configuration is present, the app will use Firestore.
-- If Firebase is not configured yet, the app falls back to the existing local SQLite storage.
+- SQLite is the local source of truth for reads and writes.
+- Firestore is used as a background sync target when Firebase native configuration is present.
+- If Firebase is unavailable, the app keeps working locally and retries sync later.
 
 ## Firebase Setup
 

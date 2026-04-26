@@ -35,3 +35,34 @@ export type DatabaseAdapter = {
   saveProductCategories: (productCategories: string[]) => Promise<void>;
   updateProductRecord: (product: Product) => Promise<void>;
 };
+
+export type SyncOperation =
+  | {
+      type: 'insertProduct';
+      product: Product;
+    }
+  | {
+      type: 'updateProduct';
+      product: Product;
+    }
+  | {
+      type: 'insertExpenseWithActivity';
+      expense: Expense;
+      activity: ActivityEntry;
+    }
+  | {
+      type: 'insertSaleAndAdjustStock';
+      sale: SaleTransaction;
+      activity: ActivityEntry;
+      nextStock: number;
+    }
+  | {
+      type: 'saveProductCategories';
+      productCategories: string[];
+    }
+  | {
+      type: 'renameProductCategory';
+      oldCategory: string;
+      newCategory: string;
+      nextCategories: string[];
+    };

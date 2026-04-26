@@ -6,7 +6,7 @@ import type {
   Product,
   SaleTransaction,
 } from '../types/models';
-import type { DatabaseAdapter, DatabaseShape } from './types';
+import type { DatabaseAdapter, DatabaseShape, SyncOperation } from './types';
 
 SQLite.enablePromise(false);
 
@@ -43,6 +43,12 @@ type SQLiteTransaction = {
 
 const DB_NAME = 'shopapp.db';
 let databaseInstance: SQLiteDatabase | null = null;
+
+type PendingSyncEntry = {
+  created_at: number;
+  id: number;
+  operation_json: string;
+};
 
 function getRowArray<T>(result: SQLiteResultSet) {
   const rows: T[] = [];
@@ -178,6 +184,36 @@ function mapActivityRow(row: Record<string, unknown>): ActivityEntry {
   };
 }
 
+function getProductTimestamp(product: Product) {
+  return Number(product.updatedAt ?? product.createdAt ?? 0);
+}
+
+function getSaleTimestamp(sale: SaleTransaction) {
+  return Number(sale.soldAt ?? 0);
+}
+
+function getExpenseTimestamp(expense: Expense) {
+  return Number(expense.recordedAt ?? expense.expenseDate ?? 0);
+}
+
+function getActivityTimestamp(activity: ActivityEntry) {
+  return Number(activity.createdAt ?? 0);
+}
+
+function queueSyncOperation(
+  tx: SQLiteTransaction,
+  operation: SyncOperation,
+  createdAt = Date.now(),
+) {
+  tx.executeSql(
+    `INSERT INTO sync_queue (
+      operation_json,
+      created_at
+    ) VALUES (?, ?)`,
+    [JSON.stringify(operation), createdAt],
+  );
+}
+
 async function initializeDatabase() {
   await executeSql(`
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -246,6 +282,14 @@ async function initializeDatabase() {
     )
   `);
 
+  await executeSql(`
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      operation_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
   const settingsResult = await executeSql(
     "SELECT COUNT(*) as count FROM app_settings WHERE key = 'productCategories'",
   );
@@ -287,41 +331,53 @@ async function loadDatabaseState(): Promise<DatabaseShape> {
 }
 
 async function insertProduct(product: Product) {
-  await executeSql(
-    `INSERT INTO products (
-      id, name, sku, category, sub_category, attributes_json,
-      cost_price, selling_price, current_stock, low_stock_threshold,
-      is_active, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    serializeProduct(product),
-  );
+  await initializeDatabase();
+
+  await runTransaction(tx => {
+    tx.executeSql(
+      `INSERT OR REPLACE INTO products (
+        id, name, sku, category, sub_category, attributes_json,
+        cost_price, selling_price, current_stock, low_stock_threshold,
+        is_active, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      serializeProduct(product),
+    );
+    queueSyncOperation(tx, { product, type: 'insertProduct' });
+  });
 }
 
 async function updateProductRecord(product: Product) {
-  await executeSql(
-    `UPDATE products
-      SET name = ?, sku = ?, category = ?, sub_category = ?, attributes_json = ?,
-          cost_price = ?, selling_price = ?, current_stock = ?, low_stock_threshold = ?,
-          is_active = ?, updated_at = ?
-      WHERE id = ?`,
-    [
-      product.name ?? '',
-      product.sku ?? null,
-      product.category ?? null,
-      product.subCategory ?? null,
-      JSON.stringify(product.attributes ?? {}),
-      product.costPrice ?? 0,
-      product.sellingPrice ?? 0,
-      product.currentStock ?? 0,
-      product.lowStockThreshold ?? 0,
-      product.isActive ? 1 : 0,
-      product.updatedAt ?? Date.now(),
-      product.id,
-    ],
-  );
+  await initializeDatabase();
+
+  await runTransaction(tx => {
+    tx.executeSql(
+      `UPDATE products
+        SET name = ?, sku = ?, category = ?, sub_category = ?, attributes_json = ?,
+            cost_price = ?, selling_price = ?, current_stock = ?, low_stock_threshold = ?,
+            is_active = ?, updated_at = ?
+        WHERE id = ?`,
+      [
+        product.name ?? '',
+        product.sku ?? null,
+        product.category ?? null,
+        product.subCategory ?? null,
+        JSON.stringify(product.attributes ?? {}),
+        product.costPrice ?? 0,
+        product.sellingPrice ?? 0,
+        product.currentStock ?? 0,
+        product.lowStockThreshold ?? 0,
+        product.isActive ? 1 : 0,
+        product.updatedAt ?? Date.now(),
+        product.id,
+      ],
+    );
+    queueSyncOperation(tx, { product, type: 'updateProduct' });
+  });
 }
 
 async function insertExpenseWithActivity(expense: Expense, activity: ActivityEntry) {
+  await initializeDatabase();
+
   await runTransaction(tx => {
     tx.executeSql(
       `INSERT INTO expenses (
@@ -350,6 +406,7 @@ async function insertExpenseWithActivity(expense: Expense, activity: ActivityEnt
         activity.createdAt ?? Date.now(),
       ],
     );
+    queueSyncOperation(tx, { activity, expense, type: 'insertExpenseWithActivity' });
   });
 }
 
@@ -358,6 +415,8 @@ async function insertSaleAndAdjustStock(
   activity: ActivityEntry,
   nextStock: number,
 ) {
+  await initializeDatabase();
+
   await runTransaction(tx => {
     tx.executeSql(
       `INSERT INTO sales (
@@ -400,14 +459,25 @@ async function insertSaleAndAdjustStock(
         activity.createdAt ?? Date.now(),
       ],
     );
+    queueSyncOperation(tx, {
+      activity,
+      nextStock,
+      sale,
+      type: 'insertSaleAndAdjustStock',
+    });
   });
 }
 
 async function saveProductCategories(productCategories: string[]) {
-  await executeSql(
-    'INSERT OR REPLACE INTO app_settings (key, value_json) VALUES (?, ?)',
-    ['productCategories', JSON.stringify(productCategories)],
-  );
+  await initializeDatabase();
+
+  await runTransaction(tx => {
+    tx.executeSql(
+      'INSERT OR REPLACE INTO app_settings (key, value_json) VALUES (?, ?)',
+      ['productCategories', JSON.stringify(productCategories)],
+    );
+    queueSyncOperation(tx, { productCategories, type: 'saveProductCategories' });
+  });
 }
 
 async function renameProductCategory(
@@ -415,6 +485,8 @@ async function renameProductCategory(
   newCategory: string,
   nextCategories: string[],
 ) {
+  await initializeDatabase();
+
   await runTransaction(tx => {
     tx.executeSql(
       'UPDATE products SET category = ?, updated_at = ? WHERE category = ?',
@@ -424,6 +496,199 @@ async function renameProductCategory(
       'INSERT OR REPLACE INTO app_settings (key, value_json) VALUES (?, ?)',
       ['productCategories', JSON.stringify(nextCategories)],
     );
+    queueSyncOperation(tx, {
+      newCategory,
+      nextCategories,
+      oldCategory,
+      type: 'renameProductCategory',
+    });
+  });
+}
+
+async function loadPendingSyncOperations() {
+  await initializeDatabase();
+  const result = await executeSql(
+    'SELECT id, operation_json, created_at FROM sync_queue ORDER BY created_at ASC, id ASC',
+  );
+
+  return getRowArray<PendingSyncEntry>(result).map(entry => ({
+    createdAt: Number(entry.created_at),
+    id: Number(entry.id),
+    operation: JSON.parse(entry.operation_json) as SyncOperation,
+  }));
+}
+
+async function removePendingSyncOperation(id: number) {
+  await initializeDatabase();
+  await executeSql('DELETE FROM sync_queue WHERE id = ?', [id]);
+}
+
+async function replaceLocalDatabaseState(nextState: DatabaseShape) {
+  await initializeDatabase();
+
+  await runTransaction(tx => {
+    nextState.products.forEach(product => {
+      tx.executeSql(
+        `INSERT OR REPLACE INTO products (
+          id, name, sku, category, sub_category, attributes_json,
+          cost_price, selling_price, current_stock, low_stock_threshold,
+          is_active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        serializeProduct(product),
+      );
+    });
+
+    nextState.sales.forEach(sale => {
+      tx.executeSql(
+        `INSERT OR REPLACE INTO sales (
+          id, product_id, product_name, product_sku, category,
+          product_attributes_snapshot_json, quantity_sold, unit_cost_price,
+          unit_selling_price, actual_sold_price, total_revenue, total_profit,
+          sold_at, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          sale.id,
+          sale.productId ?? '',
+          sale.productName ?? '',
+          sale.productSku ?? null,
+          sale.category ?? null,
+          JSON.stringify(sale.productAttributesSnapshot ?? {}),
+          sale.quantitySold ?? 0,
+          sale.unitCostPrice ?? 0,
+          sale.unitSellingPrice ?? 0,
+          sale.actualSoldPrice ?? 0,
+          sale.totalRevenue ?? 0,
+          sale.totalProfit ?? 0,
+          sale.soldAt ?? Date.now(),
+          sale.notes ?? null,
+        ],
+      );
+    });
+
+    nextState.expenses.forEach(expense => {
+      tx.executeSql(
+        `INSERT OR REPLACE INTO expenses (
+          id, title, category, amount, expense_date, recorded_at, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          expense.id,
+          expense.title ?? '',
+          expense.category ?? null,
+          expense.amount ?? 0,
+          expense.expenseDate ?? Date.now(),
+          expense.recordedAt ?? Date.now(),
+          expense.notes ?? null,
+        ],
+      );
+    });
+
+    nextState.activityFeed.forEach(activity => {
+      tx.executeSql(
+        `INSERT OR REPLACE INTO activity_logs (
+          id, type, title, amount, timestamp_text, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          activity.id,
+          activity.type ?? 'expense',
+          activity.title ?? '',
+          activity.amount ?? 0,
+          activity.timestamp ?? '',
+          activity.createdAt ?? Date.now(),
+        ],
+      );
+    });
+
+    tx.executeSql(
+      'INSERT OR REPLACE INTO app_settings (key, value_json) VALUES (?, ?)',
+      ['productCategories', JSON.stringify(nextState.settings.productCategories)],
+    );
+  });
+}
+
+async function mergeRemoteDatabaseState(remoteState: DatabaseShape) {
+  await initializeDatabase();
+  const localState = await loadDatabaseState();
+
+  const localProducts = new Map(localState.products.map(product => [product.id, product]));
+  const localSales = new Map(localState.sales.map(sale => [sale.id, sale]));
+  const localExpenses = new Map(localState.expenses.map(expense => [expense.id, expense]));
+  const localActivity = new Map(localState.activityFeed.map(entry => [entry.id, entry]));
+
+  const mergedProducts = [...localState.products];
+  remoteState.products.forEach(remoteProduct => {
+    const localProduct = localProducts.get(remoteProduct.id);
+    if (!localProduct || getProductTimestamp(remoteProduct) > getProductTimestamp(localProduct)) {
+      const index = mergedProducts.findIndex(product => product.id === remoteProduct.id);
+      if (index >= 0) {
+        mergedProducts[index] = remoteProduct;
+      } else {
+        mergedProducts.push(remoteProduct);
+      }
+    }
+  });
+
+  const mergedSales = [...localState.sales];
+  remoteState.sales.forEach(remoteSale => {
+    const localSale = localSales.get(remoteSale.id);
+    if (!localSale || getSaleTimestamp(remoteSale) >= getSaleTimestamp(localSale)) {
+      const index = mergedSales.findIndex(sale => sale.id === remoteSale.id);
+      if (index >= 0) {
+        mergedSales[index] = remoteSale;
+      } else {
+        mergedSales.push(remoteSale);
+      }
+    }
+  });
+
+  const mergedExpenses = [...localState.expenses];
+  remoteState.expenses.forEach(remoteExpense => {
+    const localExpense = localExpenses.get(remoteExpense.id);
+    if (
+      !localExpense ||
+      getExpenseTimestamp(remoteExpense) >= getExpenseTimestamp(localExpense)
+    ) {
+      const index = mergedExpenses.findIndex(expense => expense.id === remoteExpense.id);
+      if (index >= 0) {
+        mergedExpenses[index] = remoteExpense;
+      } else {
+        mergedExpenses.push(remoteExpense);
+      }
+    }
+  });
+
+  const mergedActivityFeed = [...localState.activityFeed];
+  remoteState.activityFeed.forEach(remoteActivity => {
+    const localEntry = localActivity.get(remoteActivity.id);
+    if (
+      !localEntry ||
+      getActivityTimestamp(remoteActivity) >= getActivityTimestamp(localEntry)
+    ) {
+      const index = mergedActivityFeed.findIndex(activity => activity.id === remoteActivity.id);
+      if (index >= 0) {
+        mergedActivityFeed[index] = remoteActivity;
+      } else {
+        mergedActivityFeed.push(remoteActivity);
+      }
+    }
+  });
+
+  await replaceLocalDatabaseState({
+    activityFeed: mergedActivityFeed.sort(
+      (left, right) => getActivityTimestamp(right) - getActivityTimestamp(left),
+    ),
+    expenses: mergedExpenses.sort(
+      (left, right) => getExpenseTimestamp(right) - getExpenseTimestamp(left),
+    ),
+    products: mergedProducts.sort(
+      (left, right) => getProductTimestamp(right) - getProductTimestamp(left),
+    ),
+    sales: mergedSales.sort((left, right) => getSaleTimestamp(right) - getSaleTimestamp(left)),
+    settings: {
+      productCategories:
+        localState.settings.productCategories.length > 0
+          ? localState.settings.productCategories
+          : remoteState.settings.productCategories,
+    },
   });
 }
 
@@ -436,4 +701,18 @@ export const sqliteDatabaseAdapter: DatabaseAdapter = {
   renameProductCategory,
   saveProductCategories,
   updateProductRecord,
+};
+
+export {
+  initializeDatabase,
+  insertExpenseWithActivity,
+  insertProduct,
+  loadPendingSyncOperations,
+  loadDatabaseState as loadLocalDatabaseState,
+  mergeRemoteDatabaseState,
+  removePendingSyncOperation,
+  renameProductCategory,
+  saveProductCategories,
+  updateProductRecord,
+  insertSaleAndAdjustStock,
 };

@@ -4,7 +4,7 @@ import type {
   Product,
   SaleTransaction,
 } from '../types/models';
-import type { DatabaseAdapter, DatabaseShape } from './types';
+import type { DatabaseAdapter, DatabaseShape, SyncOperation } from './types';
 
 const COLLECTIONS = {
   activityFeed: 'activityFeed',
@@ -187,6 +187,37 @@ async function isAvailable() {
   }
 }
 
+async function applySyncOperation(operation: SyncOperation) {
+  switch (operation.type) {
+    case 'insertProduct':
+      await insertProduct(operation.product);
+      return;
+    case 'updateProduct':
+      await updateProductRecord(operation.product);
+      return;
+    case 'insertExpenseWithActivity':
+      await insertExpenseWithActivity(operation.expense, operation.activity);
+      return;
+    case 'insertSaleAndAdjustStock':
+      await insertSaleAndAdjustStock(
+        operation.sale,
+        operation.activity,
+        operation.nextStock,
+      );
+      return;
+    case 'saveProductCategories':
+      await saveProductCategories(operation.productCategories);
+      return;
+    case 'renameProductCategory':
+      await renameProductCategory(
+        operation.oldCategory,
+        operation.newCategory,
+        operation.nextCategories,
+      );
+      return;
+  }
+}
+
 export const firestoreDatabaseAdapter: DatabaseAdapter = {
   insertExpenseWithActivity,
   insertProduct,
@@ -196,4 +227,10 @@ export const firestoreDatabaseAdapter: DatabaseAdapter = {
   renameProductCategory,
   saveProductCategories,
   updateProductRecord,
+};
+
+export {
+  applySyncOperation as applyFirestoreSyncOperation,
+  isAvailable as isFirestoreAvailable,
+  loadDatabaseState as loadRemoteDatabaseState,
 };
