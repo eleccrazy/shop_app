@@ -34,6 +34,42 @@ jest.mock('react-native-sqlite-storage', () => {
   };
 });
 
+jest.mock('@react-native-firebase/app', () => ({
+  __esModule: true,
+  default: {},
+}));
+
+jest.mock('@react-native-firebase/firestore', () => {
+  const documentRef = {
+    get: jest.fn(async () => ({
+      data: () => undefined,
+      exists: false,
+    })),
+    set: jest.fn(async () => undefined),
+    update: jest.fn(async () => undefined),
+  };
+
+  const collectionRef = {
+    doc: jest.fn(() => documentRef),
+    get: jest.fn(async () => ({ docs: [] })),
+    where: jest.fn(() => ({
+      get: jest.fn(async () => ({ docs: [] })),
+    })),
+  };
+
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      batch: jest.fn(() => ({
+        commit: jest.fn(async () => undefined),
+        set: jest.fn(),
+        update: jest.fn(),
+      })),
+      collection: jest.fn(() => collectionRef),
+    })),
+  };
+});
+
 test('renders correctly', async () => {
   await ReactTestRenderer.act(() => {
     ReactTestRenderer.create(<App />);

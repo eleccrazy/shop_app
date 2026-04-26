@@ -329,6 +329,7 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
         };
         const activityEntry: ActivityEntry = {
           amount: expense.amount,
+          createdAt: timestamp,
           id: createDocumentId('activity'),
           timestamp: formatTimestamp(timestamp),
           title: `Bought ${expense.title}`,
@@ -451,6 +452,7 @@ export function AppStoreProvider({ children }: React.PropsWithChildren) {
         };
         const activityEntry: ActivityEntry = {
           amount: sale.totalRevenue,
+          createdAt: timestamp,
           id: createDocumentId('activity'),
           timestamp: formatTimestamp(timestamp),
           title: `Sold ${input.quantitySold} ${product.name}`,

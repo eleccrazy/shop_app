@@ -88,3 +88,6 @@ firebase-adminsdk*.json
 
 # Local Codex workspace metadata
 .codex/
+
+# Ignore all .vscode configs
+.vscode

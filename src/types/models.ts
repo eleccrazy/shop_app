@@ -89,6 +89,7 @@ export type StockLog = WithRequiredId & {
 };
 
 export type ActivityEntry = WithRequiredId & {
+  createdAt?: number;
   type?: 'sale' | 'expense';
   title?: string;
   amount?: number;
